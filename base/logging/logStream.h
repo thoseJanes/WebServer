@@ -2,7 +2,8 @@
 #define WEBSERVER_LOGGING_LOGSTREAM_H
 //#include <memory>
 #include <string.h>
-#include "./patterns.h"
+#include "../common/patterns.h"
+#include "../common/format.h"
 #include <string>
 #include <string_view>
 
@@ -19,12 +20,13 @@ namespace detail{
 template<int SIZE>
 class LogBuffer: public Noncopyable{
 public:
+    LogBuffer():cur_(data_){}
     void append(const char* buf, int len){
-        if(data_.availBytes() >= len){
-            memcpy(data_.current(), len);
-            data_.moveWriteIndex(len);
+        if(availBytes() >= len){
+            memcpy(current(), buf, len);
+            moveWriteIndex(len);
         }else{
-            memcpy(data_.current(), buf, data_.availBytes());
+            memcpy(current(), buf, availBytes());
             setTruncatedFlag();//或者此时应当立即flush到文件中？
         }
     }
@@ -52,12 +54,14 @@ private:
     int writableBytes(){
         return SIZE - writtenBytes() +  truncatedLen;
     }
-    static const char* truncatedFlag;
-    static const int truncatedLen;
+    static constexpr char truncatedFlag[] = "...(truncated)\n";
+    static constexpr int truncatedLen = sizeof(truncatedFlag) - 1;
     char* cur_;
-    char data_[SIZE + truncatedLen];
+    char data_[SIZE + truncatedLen + 1];//留一个位置用于snprintf是否超出长度判断。
 
 };
+
+
 }
 
 class Fmt: public Noncopyable{
@@ -72,8 +76,8 @@ class LogStream: public Noncopyable{
     typedef detail::LogBuffer<4000> Buffer;
     typedef LogStream self;
 public:
-    LogStream();
-    ~LogStream();
+    LogStream() = default;
+    ~LogStream() = default;
     self& operator<<(short);
     self& operator<<(int);
     self& operator<<(long);
@@ -94,14 +98,14 @@ public:
     // LEFT_SHIFT_GENERATOR(unsigned long long);
     // #undef LEFT_SHIFT_GENERATOR
     self& operator<<(long double);
-    self& operator<<(float val){
-        *this << static_cast<long double>(val);
-        return *this;
-    }
-    self& operator<<(double val){
-        *this << static_cast<long double>(val);
-        return *this;
-    }
+    self& operator<<(float val);//{
+    //     *this << static_cast<long double>(val);
+    //     return *this;
+    // }
+    self& operator<<(double val);//{
+    //     *this << static_cast<long double>(val);
+    //     return *this;
+    // }
 
     self& operator<<(const void*);
     
@@ -136,13 +140,24 @@ public:
     //由于()的运算优先级高于<<，因此不能这样用！
     
     //此外，在这种函数上使用变参数模板可能会产生很多特化版本，得不偿失？
-    // void appendFormat(const char* fmt, ...);
-    // void appendFormat(int maxlen, const char* fmt, ...);
+    self& withFormat(const char* fmt, ...);
+    self& withFormat(int maxlen, const char* fmt, ...);
     const Buffer& buffer(){return buf_;}
+
+
+    static int getPrecision(){
+        return precision_;
+    }
 
 private:
     template<typename T, int DIGIT = 10>
-    void formatInteger(T i);
+    void formatInteger(T i){
+        if(buf_.availBytes() >= detail::maxFormatSize<T, DIGIT>()){
+            buf_.moveWriteIndex(detail::formatInteger<T, DIGIT>(buf_.current(), i));
+        }else{
+            buf_.setTruncatedFlag();
+        }
+    }
 
     Buffer buf_;
     static int precision_;

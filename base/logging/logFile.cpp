@@ -1,12 +1,12 @@
 #include "logFile.h"
 #include <time.h>
-#include "./process/currentProcess.h"
+#include "../process/currentProcess.h"
 namespace webserver{
 
 LogFile::LogFile(string& baseName, off_t maxSize, int maxLines, int flushInterval, bool threadSafe):
         maxSize_(maxSize), maxLines_(maxLines), flushInterval_(flushInterval),
         lastFlush_(0), lastRoll_(0), writtenLines_(0), baseName_(baseName), 
-        mutex_(threadSafe? new Mutex() : NULL), now_(time(NULL))
+        mutex_(threadSafe? new Mutex() : NULL)
 {
     assert(baseName_.find('/') == string::npos);
     now_ = time(NULL);
@@ -50,7 +50,7 @@ inline void LogFile::flush_unlock(){
 }
 
 void LogFile::rollFile(string fileName){
-    file_.reset(new FileAppender(baseName_));
+    file_.reset(new FileAppender(fileName));
     lastRoll_ = now_;
     writtenLines_ = 0;
 }
@@ -60,10 +60,8 @@ string LogFile::makeFileName(){
     tm tmStruct;
     char timeString[32];
     gmtime_r(&now_, &tmStruct);
-
     strftime(timeString, sizeof timeString, ".%Y%m%d-%H%M%S.", &tmStruct);
-    
-    return baseName_ + timeString + currentProcess::pidString() + ".log";
+    return baseName_ + timeString + CurrentProcess::pidString() + ".log";
 }
 
 inline bool LogFile::judgeRoll(){

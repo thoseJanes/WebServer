@@ -6,7 +6,8 @@
 #include <string>
 #include <linux/utsname.h>
 #include <limits.h>
-#include <./common/format.h>
+#include "../common/format.h"
+#include <assert.h>
 
 namespace webserver{
 
@@ -14,8 +15,15 @@ extern int p_pid;
 extern char p_pidString[32];
 extern int p_pidStringLen;
 
-namespace currentProcess{
+namespace CurrentProcess{
 using namespace std;
+
+inline void cachePid(){
+    p_pid = getpid();
+    p_pidStringLen = detail::formatInteger<pid_t>(p_pidString, p_pid);
+    assert(p_pidStringLen < sizeof(p_pidString));
+    p_pidString[p_pidStringLen] = '\0';
+}
 
 inline pid_t pid(){
     if(__builtin_expect(p_pid==0, 0)){
@@ -38,18 +46,11 @@ inline int pidStringLen(){
     return p_pidStringLen;
 }
 
-inline pid_t cachePid(){
-    p_pid = getpid();
-    char buf[detail::maxFormatSize<pid_t>()];
-    p_pidStringLen = detail::formatInteger<pid_t>(buf, pid());
-    buf[p_pidStringLen] = '\0';
-}
 
-
-uid_t uid(){
+inline uid_t uid(){
     return getuid();
 }
-uid_t euid(){
+inline uid_t euid(){
     return geteuid();
 }
 

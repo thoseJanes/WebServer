@@ -1,36 +1,50 @@
 #include "logger.h"
-#include "./thread/currentThread.h"
-#include "./time/timeStamp.h"
+#include "../thread/currentThread.h"
+#include "../time/timeStamp.h"
 #include <map>
 
 namespace webserver{
 
 namespace detail{
 std::map<Logger::LogLevel, string> LogLevel2String = {
-    {Logger::Trace, "Trace "},
-    {Logger::Debug, "Debug "},
-    {Logger::Info , "Info  "},
-    {Logger::Warn , "Warn  "},
-    {Logger::Error, "Error "},
-    {Logger::Fatal, "Fatal "},
+    {Logger::Trace, " Trace "},
+    {Logger::Debug, " Debug "},
+    {Logger::Info , " Info  "},
+    {Logger::Warn , " Warn  "},
+    {Logger::Error, " Error "},
+    {Logger::Fatal, " Fatal "},
 };
 
 void defaultLoggerOutputFunc(const char* buf, int len){
     fwrite(buf, 1, len, stdout);
-};
+}
 
 void defaultLoggerFlushFunc(){
     fflush(stdout);
-};
 }
+
+Logger::LogLevel initLogLevel(){
+    if(getenv("WEBSERVER_LOG_TRACE")){
+        return Logger::Trace;
+    }else if(getenv("WEBSERVER_LOG_DEBUG")){
+        return Logger::Debug;
+    }else{
+        return Logger::Info;
+    }
+}
+}
+
+Logger::FlushFunc Global::logFlushFunc = detail::defaultLoggerFlushFunc;
+Logger::OutputFunc Global::logOutputFunc = detail::defaultLoggerOutputFunc;
+Logger::LogLevel Global::logLevel = detail::initLogLevel();
 
 //time tidAndLoglevel [errno ]content - fileName:line
 Logger::Logger(Logger::SourceFile sourceFile, int line, Logger::LogLevel level):
-        outputFunc_(detail::defaultLoggerOutputFunc), flushFunc_(detail::defaultLoggerFlushFunc),
+        outputFunc_(Global::logOutputFunc), flushFunc_(Global::logFlushFunc),
         level_(level), source_(sourceFile), line_(line){
     stream_ << TimeStamp::now().getMicroSecondsSinceEpoch() << " " 
             << string_view(CurrentThread::tidString(), CurrentThread::tidStringLen())
-            << string_view(detail::LogLevel2String[level].c_str(), 6);
+            << string_view(detail::LogLevel2String[level].c_str(), 7);
 }
 
 Logger::~Logger(){

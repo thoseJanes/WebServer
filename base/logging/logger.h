@@ -1,17 +1,13 @@
 #ifndef WEBSERVER_LOGGING_LOGGER_H
 #define WEBSERVER_LOGGING_LOGGER_H
 
-#include "./patterns.h"
+#include "../common/patterns.h"
 #include "logStream.h"
 
 
 namespace webserver{
 
 namespace detail{
-
-}
-
-namespace{
 class SourceFile{
 public:
     template<int N>
@@ -32,11 +28,12 @@ public:
     int len;
     const char* name;
 };
-
 }
 
-inline LogStream& operator<<(LogStream& stream, const SourceFile file){
-    stream.append(file.len, "%s", file.name);
+
+
+inline LogStream& operator<<(LogStream& stream, const detail::SourceFile file){
+    stream.withFormat(file.len, "%s", file.name);
     return stream;
 }
 
@@ -44,7 +41,7 @@ class Logger:Noncopyable{
 public:
     typedef void (*OutputFunc)(const char*, int);
     typedef void (*FlushFunc)();
-    typedef SourceFile SourceFile;
+    typedef detail::SourceFile SourceFile;
     enum LogLevel{
         Trace,
         Debug,
@@ -73,14 +70,34 @@ private:
 
 
 
-namespace global{
-    Logger::LogLevel logLevel;
-    Logger::OutputFunc logOutputFunc;
-    Logger::FlushFunc logFlushFunc;
+namespace Global{
+    extern Logger::LogLevel logLevel;
+    extern Logger::OutputFunc logOutputFunc;
+    extern Logger::FlushFunc logFlushFunc;
+
+    inline void setGlobalLogLevel(Logger::LogLevel level){
+        logLevel = level;
+    }
+    inline Logger::LogLevel getGlobalLogLevel(){
+        return logLevel;
+    }
+    inline void setGlobalOutputFunc(Logger::OutputFunc func){
+        logOutputFunc = func;
+    }
+    inline void setGlobalFlushFunc(Logger::FlushFunc func){
+        logFlushFunc = func;
+    }
 }
 
 
 }
+
+#define LOG_INFO if(webserver::Global::logLevel <= webserver::Logger::Info) \
+    webserver::Logger(__FILE__, __LINE__, webserver::Logger::Info).stream()
+#define LOG_DEBUG if(webserver::Global::logLevel <= webserver::Logger::Debug) \
+    webserver::Logger(__FILE__, __LINE__, webserver::Logger::Debug).stream()
+#define LOG_TRACE if(webserver::Global::logLevel <= webserver::Logger::Trace) \
+    webserver::Logger(__FILE__, __LINE__, webserver::Logger::Trace).stream()
 
 
 #endif

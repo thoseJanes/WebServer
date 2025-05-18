@@ -5,22 +5,14 @@
 #include <stdint.h>//uintptr_t
 #include <stdio.h>//snprintf
 #include <stdarg.h>//va_list 变参数
-#include "./common/format.h"
+
 
 namespace webserver{
 
-const char* LogStream::Buffer::truncatedFlag = "...(truncated)";
-const int LogStream::Buffer::truncatedLen = strlen(truncatedFlag);
+// constexpr char* LogStream::Buffer::truncatedFlag = "...(truncated)";
+// constexpr int LogStream::Buffer::truncatedLen = sizeof(truncatedFlag);
 
 
-template<typename T, int DIGIT = 10>
-void LogStream::formatInteger(T i){
-    if(buf_.availBytes() >= detail::maxFormatSize<T, DIGIT>()){
-        buf_.moveWriteIndex(detail::formatInteger<T, DIGIT>(buf_.current(), i));
-    }else{
-        buf_.setTruncatedFlag();
-    }
-}
 
 #define LEFT_SHIFT_GENERATOR(tp) \
 LogStream& LogStream::operator<<(tp i){ \
@@ -47,9 +39,9 @@ LogStream& LogStream::operator<<(const void* ptr){
 
 int LogStream::precision_ = 12;
 
-#define LEFT_SHIFT_GENERATOR(tp) \
+#define LEFT_SHIFT_GENERATOR(fmt, tp) \
 LogStream& LogStream::operator<<(tp val){ \
-    int offset = snprintf(buf_.current(), buf_.availBytes()+1, "%.*g", precision_, val); \
+    int offset = snprintf(buf_.current(), buf_.availBytes()+1, (fmt), precision_, val); \
     if(offset <= buf_.availBytes()){ \
         buf_.moveWriteIndex(offset); \
     }else{ \
@@ -58,9 +50,9 @@ LogStream& LogStream::operator<<(tp val){ \
     return *this; \
 }
 
-LEFT_SHIFT_GENERATOR(float);
-LEFT_SHIFT_GENERATOR(double);
-LEFT_SHIFT_GENERATOR(long double);
+LEFT_SHIFT_GENERATOR("%.*g", float);
+LEFT_SHIFT_GENERATOR("%.*g", double);
+LEFT_SHIFT_GENERATOR("%.*Lg", long double);
 #undef LEFT_SHIFT_GENERATOR
 /*
 LogStream& LogStream::operator<<(long double val){
@@ -98,6 +90,7 @@ LogStream& LogStream::withFormat(const char* fmt, ...){
     }else{//超出范围了,即为avail+1
         buf_.setTruncatedFlag();
     }
+    return *this;
 }
 
 LogStream& LogStream::withFormat(int maxlen, const char* fmt, ...){
@@ -111,6 +104,7 @@ LogStream& LogStream::withFormat(int maxlen, const char* fmt, ...){
     }else{//超出范围了,即为avail+1
         buf_.setTruncatedFlag();
     }
+    return *this;
 }
 
 

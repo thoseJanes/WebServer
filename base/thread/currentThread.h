@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/syscall.h>//SYS_gettid
 #include <stdio.h>
+#include <unistd.h>
 namespace webserver{
 
 namespace CurrentThread{
@@ -12,8 +13,7 @@ extern __thread char t_tidString[32];
 extern __thread int t_tidStringLen;
 extern __thread const char* t_threadName;
 
-
-inline const char* strerror_tl(int err);
+const char* strerror_tl(int err);
 
 inline void cacheTid(){
     if(!t_tid){

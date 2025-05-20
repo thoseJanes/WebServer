@@ -6,7 +6,7 @@ namespace webserver{
 LogFile::LogFile(string& baseName, off_t maxSize, int maxLines, int flushInterval, bool threadSafe):
         maxSize_(maxSize), maxLines_(maxLines), flushInterval_(flushInterval),
         lastFlush_(0), lastRoll_(0), writtenLines_(0), baseName_(baseName), 
-        mutex_(threadSafe? new Mutex() : NULL)
+        mutex_(threadSafe? new MutexLock() : NULL)
 {
     assert(baseName_.find('/') == string::npos);
     now_ = time(NULL);
@@ -15,7 +15,7 @@ LogFile::LogFile(string& baseName, off_t maxSize, int maxLines, int flushInterva
 
 void LogFile::append(const char* logline, int len){
     if(mutex_){
-        MutexGuard lock(*mutex_);
+        MutexLockGuard lock(*mutex_);
         append_unlock(logline, len);
     }else{
         append_unlock(logline, len);
@@ -24,7 +24,7 @@ void LogFile::append(const char* logline, int len){
 
 void LogFile::flush(){
     if(mutex_){
-        MutexGuard lock(*mutex_);
+        MutexLockGuard lock(*mutex_);
         flush_unlock();
     }else{
         flush_unlock();
@@ -61,7 +61,7 @@ string LogFile::makeFileName(){
     char timeString[32];
     gmtime_r(&now_, &tmStruct);
     strftime(timeString, sizeof timeString, ".%Y%m%d-%H%M%S.", &tmStruct);
-    return baseName_ + timeString + CurrentProcess::pidString() + ".log";
+    return baseName_ + timeString + CurrentProcess::hostname() + CurrentProcess::pidString() + ".log";
 }
 
 inline bool LogFile::judgeRoll(){

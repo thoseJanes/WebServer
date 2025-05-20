@@ -1,6 +1,6 @@
 #ifndef WEBSERVER_THREAD_CURRENTTHREAD_H
 #define WEBSERVER_THREAD_CURRENTTHREAD_H
-#include <string.h>
+#include <string.h>//strerror_r
 #include <sys/syscall.h>//SYS_gettid
 #include <stdio.h>
 #include <unistd.h>

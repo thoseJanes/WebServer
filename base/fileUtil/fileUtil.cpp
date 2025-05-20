@@ -15,14 +15,14 @@ int SmallFileReader::toBuffer(int maxSize){
         return errno;
     }
 
-    auto err = errno;
+    auto err = 0;
     struct stat statBuf;
     int len = min<int>(sizeof(buf_)-1, maxSize);
     if(fstat(fd_, &statBuf)){
         err = errno;
     }else{
         if(S_ISREG(statBuf.st_mode)){
-            len = min<int>(len, statBuf.st_size);
+            //len = min<int>(len, statBuf.st_size);//读取proc/self/stat时，大小为0？？
         }else if(S_ISDIR(statBuf.st_mode)){
             err = EISDIR;
         }

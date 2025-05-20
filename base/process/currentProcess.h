@@ -26,21 +26,21 @@ inline void cachePid(){
 }
 
 inline pid_t pid(){
-    if(__builtin_expect(p_pid==0, 0)){
+    if(__builtin_expect(0==p_pid, 0)){
         cachePid();
     }
     return p_pid;
 }
 
 inline const char* pidString(){
-    if(__builtin_expect(p_pid==0, 0)){
+    if(__builtin_expect(0==p_pid, 0)){
         cachePid();
     }
     return p_pidString;
 }
 
 inline int pidStringLen(){
-    if(__builtin_expect(p_pid==0, 0)){
+    if(__builtin_expect(0==p_pid, 0)){
         cachePid();
     }
     return p_pidStringLen;
@@ -54,7 +54,9 @@ inline uid_t euid(){
     return geteuid();
 }
 
-
+string procname();
+string username();
+string hostname();
 
 }
 

@@ -15,7 +15,8 @@ LogFile logFile(str);
 
 
 void LoggerTest(){
-    LOG_INFO << "\n";
+    //LOG_INFO << "\n";
+    printf("\n");
     #define TestCaseGenerator(tp, value, fmt) \
     {tp vl = value; \
     LOG_INFO << #tp " test:" << vl; \
@@ -68,7 +69,8 @@ void LogFileTest(){
     auto flushFunc = [](){logFile.flush();};
     Global::setGlobalFlushFunc(flushFunc);
     Global::setGlobalOutputFunc(outputFunc);
-    LOG_INFO << "\n";
+    //LOG_INFO << "\n";
+    printf("\n");
     LOG_INFO << "log file test";
 
 }
@@ -78,7 +80,8 @@ void LogLevelTest(){
     //std::function<void()> flushFunc = [&logFile](){logFile.flush();};
     Logger::LogLevel original = Global::getGlobalLogLevel();
     Global::setGlobalLogLevel(Logger::Debug);
-    LOG_INFO << "\n";
+    //LOG_INFO << "\n";
+    printf("\n");
     LOG_INFO << "log info";
     LOG_TRACE << "log trace";
     LOG_DEBUG << "log debug";

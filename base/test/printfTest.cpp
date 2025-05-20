@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "patterns.h"
+#include "../common/patterns.h"
 
 using namespace webserver;
 class TestClass{
@@ -39,7 +39,8 @@ int main() {
         }
     }
 
-
+    printf("%05d\n", 50);
+    printf("%5d\n", 50);
     //pass_to_snprintf(buf, 255, "presdfadfascision:%d, formatSize:%d\n", precision, formatSize);
     //printf("%s", buf);
     //printf("%ld\n", sizeof __FILE__);

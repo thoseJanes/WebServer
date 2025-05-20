@@ -42,7 +42,7 @@ Logger::LogLevel Global::logLevel = detail::initLogLevel();
 Logger::Logger(Logger::SourceFile sourceFile, int line, Logger::LogLevel level):
         outputFunc_(Global::logOutputFunc), flushFunc_(Global::logFlushFunc),
         level_(level), source_(sourceFile), line_(line){
-    stream_ << TimeStamp::now().getMicroSecondsSinceEpoch() << " " 
+    stream_ << TimeStamp::now().toFormattedString(true) << " " 
             << string_view(CurrentThread::tidString(), CurrentThread::tidStringLen())
             << string_view(detail::LogLevel2String[level].c_str(), 7);
 }

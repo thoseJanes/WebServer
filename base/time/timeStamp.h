@@ -2,7 +2,8 @@
 #define WEBSERVER_TIME_TIMESTAMP_H
 #include <boost/operators.hpp>
 #include <sys/time.h>
-
+#include <string>
+using namespace std;
 namespace webserver{
 
 class TimeStamp : public boost::equality_comparable<TimeStamp>, 
@@ -17,6 +18,24 @@ public:
         timeval time;
         gettimeofday(&time, NULL);
         return TimeStamp((int64_t)time.tv_sec * kMicroSecondsPerSecond + time.tv_usec);
+    }
+    string toFormattedString(bool microSeconds){
+        time_t seconds = microSecondsSinceEpoch_/kMicroSecondsPerSecond;
+        tm tmstruct;
+        gmtime_r(&seconds, &tmstruct);
+        
+        char buf[32];
+        if(microSeconds){
+            snprintf(buf, sizeof(buf), "%04d%02d%02d %02d:%02d:%02d.%06dZ", 
+                    tmstruct.tm_year+1900, tmstruct.tm_mon+1, tmstruct.tm_mday, 
+                    tmstruct.tm_hour, tmstruct.tm_min, tmstruct.tm_sec, 
+                    microSecondsSinceEpoch_%kMicroSecondsPerSecond);
+        }else{
+            snprintf(buf, sizeof(buf), "%04d%02d%02d %02d:%02d:%02d", 
+                    tmstruct.tm_year+1900, tmstruct.tm_mon+1, tmstruct.tm_mday, 
+                    tmstruct.tm_hour, tmstruct.tm_min, tmstruct.tm_sec);
+        }
+        return buf;
     }
 private:
     int64_t microSecondsSinceEpoch_;

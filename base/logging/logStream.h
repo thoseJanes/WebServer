@@ -50,6 +50,7 @@ public:
     }
 
     const char* data() const {return data_;}
+    void reset(){cur_ = data_;}
 private:
     int writableBytes(){
         return SIZE - writtenBytes() +  truncatedLen;

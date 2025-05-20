@@ -38,7 +38,7 @@ inline bool operator==(const Date& d1, const Date& d2){
     return d1.julianDay()==d2.julianDay();
 }
 
-class DateTime{
+struct DateTime{
     int year;
     int month;
     int day;

@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include "patterns.h"
+#include "../thread/currentThread.h"
 
 namespace webserver{
 
@@ -14,31 +15,63 @@ namespace webserver{
     (void)errnum; \
 })
 
-class Mutex:Noncopyable{
+class MutexLock:Noncopyable{
 public:
-    Mutex(){MCHECK(pthread_mutex_init(&mutex_, NULL));}
-    void lock(){MCHECK(pthread_mutex_lock(&mutex_));}
-    void unlock(){MCHECK(pthread_mutex_unlock(&mutex_));}
-    ~Mutex(){MCHECK(pthread_mutex_destroy(&mutex_));}
-
+    MutexLock(){MCHECK(pthread_mutex_init(&mutex_, NULL));}
+    void lock(){
+        MCHECK(pthread_mutex_lock(&mutex_));
+        assignHolder();
+    }
+    void unlock(){
+        unassignHolder();
+        MCHECK(pthread_mutex_unlock(&mutex_));
+    }
+    ~MutexLock(){MCHECK(pthread_mutex_destroy(&mutex_));}
+    
 private:
-    pthread_mutex_t mutex_;
+    void assignHolder(){
+        holder_ = CurrentThread::tid();
+    }
+    void unassignHolder(){
+        holder_ = 0;
+    }
+    pthread_mutex_t* pthreadMutex(){return &mutex_;}
 
+    friend class Condition;
+    friend class BlockGuard;
+    friend class CountDownLatch;
+    pthread_mutex_t mutex_;
+    pid_t holder_ = 0;
 };
 
-class MutexGuard:Noncopyable{
+
+class BlockGuard{
 public:
-    MutexGuard(Mutex& mutex):mutex_(mutex){
+    BlockGuard(MutexLock& owner):owner_(owner){
+        owner_.unassignHolder();
+    }
+    ~BlockGuard(){
+        owner_.assignHolder();
+    }
+private:
+    MutexLock& owner_;
+};
+
+
+class MutexLockGuard:Noncopyable{
+public:
+    MutexLockGuard(MutexLock& mutex):mutex_(mutex){
         mutex_.lock();
     }
-    ~MutexGuard(){
+    ~MutexLockGuard(){
         mutex_.unlock();
     }
 private:
-    Mutex& mutex_;
+    MutexLock& mutex_;
 };
 
-#define MutexGuard(mutex) error "create MutexGuard without object name."
+#define MutexLockGuard(mutex) error "create MutexGuard without object name."
+#define BlockGuard(mutex) error "create BlockGuard without object name."
 
 }
 

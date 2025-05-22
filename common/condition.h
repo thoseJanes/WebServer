@@ -1,6 +1,6 @@
 #ifndef WEBSERVER_COMMON_CONDITION_H
 #define WEBSERVER_COMMON_CONDITION_H
-#include "mutex.h"
+#include "mutexLock.h"
 #include <pthread.h>
 
 namespace webserver{

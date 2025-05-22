@@ -1,8 +1,9 @@
 #ifndef WEBSERVER_LOGGING_LOGFILE_H
 #define WEBSERVER_LOGGING_LOGFILE_H
-#include "../fileUtil/fileUtil.h"
+
 #include <memory>
-#include "../common/mutex.h"
+#include "../common/fileUtil.h"
+#include "../common/mutexLock.h"
 
 namespace webserver{
 
@@ -28,7 +29,7 @@ private:
 
     const string baseName_;
     unique_ptr<FileAppender> file_;
-    unique_ptr<Mutex> mutex_;
+    unique_ptr<MutexLock> mutex_;
 
     int lastFlush_;
     int lastRoll_;

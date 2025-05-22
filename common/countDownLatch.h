@@ -1,7 +1,7 @@
 #ifndef WEBSERVER_COMMON_COUNTDOWNLATCH_H
 #define WEBSERVER_COMMON_COUNTDOWNLATCH_H
 
-#include "mutex.h"
+#include "mutexLock.h"
 #include "condition.h"
 #include <pthread.h>
 

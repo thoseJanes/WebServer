@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include "patterns.h"
-#include "../thread/currentThread.h"
+#include "../process/currentThread.h"
 
 namespace webserver{
 
@@ -27,7 +27,12 @@ public:
         MCHECK(pthread_mutex_unlock(&mutex_));
     }
     ~MutexLock(){MCHECK(pthread_mutex_destroy(&mutex_));}
-    
+    bool lockedInPresentThread(){
+        return holder_ == CurrentThread::tid();
+    }
+    bool isLocked(){
+        return holder_ != 0;
+    }
 private:
     void assignHolder(){
         holder_ = CurrentThread::tid();

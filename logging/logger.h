@@ -99,5 +99,13 @@ namespace Global{
 #define LOG_TRACE if(webserver::Global::logLevel <= webserver::Logger::Trace) \
     webserver::Logger(__FILE__, __LINE__, webserver::Logger::Trace).stream()
 
+#define LOG_WARN \
+    webserver::Logger(__FILE__, __LINE__, webserver::Logger::Warn).stream()
+#define LOG_ERR \
+    webserver::Logger(__FILE__, __LINE__, webserver::Logger::Error).stream()
+#define LOG_FATAL \
+    webserver::Logger(__FILE__, __LINE__, webserver::Logger::Fatal).stream()
+
+
 
 #endif

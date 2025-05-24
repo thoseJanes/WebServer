@@ -9,7 +9,7 @@ namespace webserver{
 class TimeStamp : public boost::equality_comparable<TimeStamp>, 
                 public boost::less_than_comparable<TimeStamp>{
 public:
-    TimeStamp(int64_t microSecondsSinceEpoch):microSecondsSinceEpoch_(microSecondsSinceEpoch){}
+    explicit TimeStamp(int64_t microSecondsSinceEpoch):microSecondsSinceEpoch_(microSecondsSinceEpoch){}
     static const int kMicroSecondsPerSecond = 1000*1000;
     static const int kSecondsPerDay = 24*60*60;
     int64_t getMicroSecondsSinceEpoch() const {return microSecondsSinceEpoch_;}
@@ -37,10 +37,15 @@ public:
         }
         return buf;
     }
+    void add(int microSeconds){this->microSecondsSinceEpoch_ += microSeconds;}
 private:
     int64_t microSecondsSinceEpoch_;
 };
 
+//offset = to - from
+int64_t microSecondsOffset(TimeStamp from, TimeStamp to){
+    return to.getMicroSecondsSinceEpoch() - from.getMicroSecondsSinceEpoch();
+}
 
 inline bool operator<(const TimeStamp& t1, const TimeStamp& t2){
     return t1.getMicroSecondsSinceEpoch() < t2.getMicroSecondsSinceEpoch();

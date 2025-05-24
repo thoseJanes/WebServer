@@ -10,6 +10,24 @@
 #include <memory.h>
 
 using namespace std;
+namespace webserver{
+
+namespace detail{
+    sockaddr* toSockaddrPtr(sockaddr_in* addr){
+        return static_cast<sockaddr*>(static_cast<void*>(addr));
+    }
+    sockaddr* toSockaddrPtr(sockaddr_in6* addr){
+        return static_cast<sockaddr*>(static_cast<void*>(addr));
+    }
+
+    sockaddr_in* toSockaddrInPtr(sockaddr* addr){
+        return static_cast<sockaddr_in*>(static_cast<void*>(addr));
+    }
+    sockaddr_in6* toSockaddrIn6Ptr(sockaddr* addr){
+        return static_cast<sockaddr_in6*>(static_cast<void*>(addr));
+    }
+}
+
 class InetAddress{
 public:
     InetAddress(string_view ip, in_port_t port, sa_family_t family){
@@ -27,7 +45,7 @@ public:
         }
     }
 
-    sa_family_t addressFamily(){return addr_.sin_family;}
+    sa_family_t family(){return addr_.sin_family;}
     
     //InetAddress(sockaddr_in addr):addr_(addr){}
 
@@ -41,7 +59,7 @@ private:
 };
 
 
-
+}
 
 
 #endif

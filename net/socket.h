@@ -4,19 +4,14 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <fcntl.h>
 #include <errno.h>
 #include "../logging/logger.h"
 #include "inetAddress.h"
 
-
 namespace webserver{
 namespace detail{//不仅为了包装，也为了过滤一些错误。留下待处理的错误。
-
-    union UnionAddr{
-        sockaddr_in addr;
-        sockaddr_in6 addr6;
-    };
 
     int enableFdOption(int fd, int option){
         int oldOption = fcntl(fd, F_GETFL);
@@ -62,64 +57,58 @@ namespace detail{//不仅为了包装，也为了过滤一些错误。留下待�
         return ::connect(fd, (sockaddr*)addr, sizeof(UnionAddr))<0;
     }
 
-    void getPeerAddr(int fd, UnionAddr* addr){
-        //sockaddr_in6 addr;
-        socklen_t addrLen = sizeof(UnionAddr);
-        memset(addr, 0, addrLen);
-        
-        if(getpeername(fd, (sockaddr*)addr, &addrLen)<0){
-            LOG_FATAL << "getPeerAddr failed";
+    void shutDownWrite(int fd){
+        if(::shutdown(fd, SHUT_WR) < 0){
+            LOG_ERR << "failed in shutDownWrite().";
         }
     }
 
-    void getHostAddr(int fd, UnionAddr* addr){//是否要保证传入值必须得有sockaddr_in6的空间？如何保证？用InetAddress？
-        //sockaddr_in6 addr;
-        socklen_t addrLen = sizeof(UnionAddr);
-        memset(addr, 0, addrLen);
-        
-        if(getsockname(fd, (sockaddr*)addr, &addrLen)<0){
-            LOG_FATAL << "getPeerAddr failed";
-        }
-    }
-
-    bool isLoopbackSocket(int fd){
-        UnionAddr hAddr;
-        UnionAddr pAddr;
-        getHostAddr(fd, &hAddr);
-        getPeerAddr(fd, &pAddr);
-        if(hAddr.addr.sin_family == AF_INET){
-            return hAddr.addr.sin_addr.s_addr == pAddr.addr.sin_addr.s_addr 
-                    && hAddr.addr.sin_port == pAddr.addr.sin_port;
-        }else if(hAddr.addr6.sin6_family == AF_INET6){
-            return memcmp(&hAddr.addr6.sin6_addr, &pAddr.addr6.sin6_addr, sizeof(in6_addr))
-                    && hAddr.addr6.sin6_port == pAddr.addr6.sin6_port;
-        }else{
-            LOG_FATAL << "unknow address faimily.";
-        }
-    }
-
+    //void read
 }
+
 class Socket{
 public:
     explicit Socket(int fd):fd_(fd){}
     int fd() {return fd_;}
-    void bind(InetAddress addr){return detail::bindOrDie(fd_, (detail::UnionAddr*)&addr);}
-    int connect(InetAddress addr){return detail::connect(fd_, (detail::UnionAddr*)&addr);}
+    void bind(InetAddress addr){detail::bindOrDie(fd_, addr.getAddr());}
+    void listen(){detail::listenOrDie(fd_, 4096);}
+    int accept(InetAddress& addr){detail::accept(fd_, addr.getAddr());}
+    //int connect(InetAddress addr){return detail::connect(fd_, addr.getAddr());}
+    void shutDownWrite(){detail::shutDownWrite(fd_);}
 
+
+
+
+    void setTcpNoDelay(){
+        int optVal = 1;
+        if(setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &optVal, sizeof(optVal))){
+            LOG_FATAL << "failed in Socket::setTcpNoDelay()";
+        }
+    }
+    void setReusePort(){
+        int optVal = 1;
+        if(setsockopt(fd_, SOL_SOCKET, SO_REUSEPORT, &optVal, sizeof(optVal))){
+            LOG_FATAL << "failed in Socket::setReusePort()";
+        }
+    }
+    void setReuseAddr(){
+        int optVal = 1;
+        if(setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal))){
+            LOG_FATAL << "failed in Socket::setReuseAddr()";
+        }
+    }
+    void setKeepAlive(){
+        int optVal = 1;
+        if(setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, &optVal, sizeof(optVal))){
+            LOG_FATAL << "failed in Socket::setKeepAlive()";
+        }
+    }
 
 private:
     int fd_;
-
 };
 
 }
-
-
-
-
-
-
-
 
 
 #endif

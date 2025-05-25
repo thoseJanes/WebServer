@@ -6,6 +6,7 @@
 namespace webserver{
 
 class Channel;
+class EventLoop;
 class Poller{
 public:
     Poller();
@@ -14,9 +15,8 @@ public:
     virtual void updateChannel(Channel* channel) = 0;
     virtual void removeChannel(Channel* channel) = 0;//通过文件描述符找到需要删除的channel。
 private:
-    std::map<int, Channel*> channels_;
-
-}
+    
+};
 
     
 };

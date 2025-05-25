@@ -35,11 +35,17 @@ public:
     bool hasEvent(){
         return event_ != 0;
     }
-
+    void setREvent(int revent){
+        revent_ = revent;
+    }
     void assertInLoopThread();
 
     ~Channel() = default;
     
+    int getPollState(){return state_;}
+    void setPollState(PollState state){state_ = state;}
+    int getFd(){return fd_;}
+    int getEvent(){return event_;}
 private:
     int fd_;
     EventLoop* loop_;

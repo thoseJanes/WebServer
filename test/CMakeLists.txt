@@ -14,3 +14,7 @@ target_link_libraries(loggerTest ${WEBSERVER_BASE_LIB})
 
 add_executable(processTest processTest.cpp)
 target_link_libraries(processTest ${WEBSERVER_BASE_LIB})
+
+
+add_executable(threadTest threadTest.cpp)
+target_link_libraries(threadTest ${WEBSERVER_BASE_LIB})

@@ -1,6 +1,6 @@
 #include "currentProcess.h"
 #include "../common/format.h"
-#include "../fileUtil/fileUtil.h"
+#include "../common/fileUtil.h"
 #include <limits>
 #include <pwd.h>
 

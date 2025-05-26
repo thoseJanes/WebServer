@@ -8,8 +8,8 @@
 #include <string.h>//strerror_r
 #include <pwd.h>//getpwuid_r
 #include <string>
-#include <webserver/base/fileUtil/fileUtil.h>
-#include <webserver/base/process/currentProcess.h>
+#include "../common/fileUtil.h"
+#include "../process/currentProcess.h"
 #include <sys/prctl.h>
 using namespace std;
 using namespace webserver;

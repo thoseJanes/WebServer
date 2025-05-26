@@ -18,34 +18,13 @@ struct ThreadData{
     pid_t* getTid;
 };
 
-void* runInThread(void* threadData){
-    ThreadData* data = reinterpret_cast<ThreadData*>(threadData);
-
-    *(data->getTid) = CurrentThread::tid();
-    prctl(PR_SET_NAME, data->name.c_str());
-    auto func = data->func;
-    data->latch->countDown();//由于data存储在栈上，countDown()之后，data会被删除。
-
-    try{
-        func();
-    }
-    catch(std::exception e){
-        fprintf(stderr, "%s", e.what());
-        abort();
-    }
-    catch(...){
-        fprintf(stderr, "unknow error.");
-        abort();
-    }
-
-    return NULL;
-}
+void* runInThread(void* threadData);
 
 class ThreadHandler{
 public:
-    ThreadHandler(function<void()> func, string name = NULL)
+    ThreadHandler(function<void()> func, string name = "")
     :func_(std::move(func)), name_(name), started_(false), joined_(false){
-        if(!name){
+        if(name.empty()){
             initName();
         }
     }
@@ -71,6 +50,12 @@ public:
             pthread_join(thread_, NULL);
             joined_ = true;
         }
+    }
+    bool joined(){
+        return joined_;
+    }
+    bool started(){
+        return started_;
     }
     // void detach(){
     //     if(pthread_detach(thread_)){

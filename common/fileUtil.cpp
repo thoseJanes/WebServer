@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#include "../thread/currentThread.h"
+#include "../process/currentThread.h"
 
 namespace webserver{
 

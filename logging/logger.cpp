@@ -1,5 +1,5 @@
 #include "logger.h"
-#include "../thread/currentThread.h"
+#include "../process/currentThread.h"
 #include "../time/timeStamp.h"
 #include <map>
 

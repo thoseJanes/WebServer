@@ -63,6 +63,7 @@ public:
     }
 
     void quit(){
+        assert(running_);
         if(running_){
             running_ = false;
             if(!isInLoopThread()){
@@ -134,6 +135,16 @@ public:
     static EventLoop* getThreadEventLoop(){
         return t_eventLoop_;
     }
+
+    void wakeup(){
+        //即使是在自己线程，也需要wakeup。不过由于readWakeupFd也是在自己线程，所以，可能刚wakeup，然后就被readWakeupFd读取走了？
+        //但是这也没关系，因为wakeup就是为了唤醒epoll_wait而存在的。
+        int64_t buf = 1;
+        int n = write(wakeupFd_, &buf, sizeof(buf));
+        if(n != 8){
+            LOG_ERR << "Expect 8 bytes but write " << n << " bytes in EventLoop::wakeup().";
+        }
+    }
 private:
     void runPendingFunctions(){//是否需要状态相关的判断？
         assertInLoopThread();
@@ -150,15 +161,7 @@ private:
         MutexLockGuard lock(mutex_);
         pendingFuncs_.push_back(func);
     }
-    void wakeup(){
-        //即使是在自己线程，也需要wakeup。不过由于readWakeupFd也是在自己线程，所以，可能刚wakeup，然后就被readWakeupFd读取走了？
-        //但是这也没关系，因为wakeup就是为了唤醒epoll_wait而存在的。
-        int64_t buf = 1;
-        int n = write(wakeupFd_, &buf, sizeof(buf));
-        if(n != 8){
-            LOG_ERR << "Expect 8 bytes but write " << n << " bytes in EventLoop::wakeup().";
-        }
-    }
+
     void wakeupCallback(){
         //assertInLoopThread();这个assert会在channel中保证，这里不需要担心它。
         int64_t buf;

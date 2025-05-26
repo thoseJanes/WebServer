@@ -2,6 +2,7 @@
 #define WEBSERVER_COMMON_CONDITION_H
 #include "mutexLock.h"
 #include <pthread.h>
+#include <errno.h>
 
 namespace webserver{
 

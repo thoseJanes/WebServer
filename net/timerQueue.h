@@ -30,7 +30,7 @@ int setTimerFd(int fd, TimeStamp timeStamp){//setTimerfd时，是否需要取消
     }
     itimerspec t; memset(&t, 0, sizeof(t));
     t.it_value.tv_sec = microSeconds/TimeStamp::kMicroSecondsPerSecond;
-    t.it_value.tv_nsec = microSeconds%TimeStamp::kMicroSecondsPerSecond*1000;//微秒到纳秒的转换。
+    t.it_value.tv_nsec = (microSeconds%TimeStamp::kMicroSecondsPerSecond)/100*100 * 1000;//微秒到纳秒的转换。以及分辨率0.1毫秒。
     
     if(timerfd_settime(fd, NULL, &t, NULL)){
         LOG_FATAL << "failed in timerfd_settime().";
@@ -45,21 +45,41 @@ public:
     typedef std::pair<TimeStamp, Timer*> StampTimerPair;
     typedef std::pair<int, Timer*> IdTimerPair;
 
-    TimerQueue(EventLoop* eventLoop):fd_(detail::createTimerFd()), channel_(new Channel(fd_, eventLoop)), handlingTimerCallback_(false){
-        channel_->enableReadableEvent(std::bind(timerFdReadCallBack, this));
-        channel_->update();//更新到eventLoop中。但是如果此时poller还未生成呢？
+    TimerQueue(EventLoop* eventLoop)
+    :   fd_(detail::createTimerFd()), 
+        channel_(new Channel(fd_, eventLoop)), 
+        handlingTimerCallback_(false)
+    {
+        channel_->setReadableCallback(std::bind(timerFdReadCallBack, this));
+        channel_->enableReading();//更新到eventLoop中。但是如果此时poller还未生成呢？
     }
-    ~TimerQueue();
-
-    void addTimer(Timer* timer){
-        //channel_->assertInLoopThread();
-        
-        insert(timer);
-        //return timer->getTimerId();
-        //timedTimers_.insert({time, timer});
+    ~TimerQueue(){
+        channel_->disableAll();
+        channel_->remove();
+        ::close(fd_);
     }
 
-    int cancelTimer(int timerId){
+    TimerId addTimer(TimeStamp start, function<void()> callback, double intervalSeconds){
+        Timer* timer = new Timer(start, callback, intervalSeconds);
+        insertTimer(timer);
+        return TimerId(timer->getTimerId());
+    }
+
+    void insertTimer(Timer* timer){
+        assert(timedTimers_.size() == numberedTimers_.size());
+        assert(timedTimers_.find({timer->getTimeStamp(), timer})==timedTimers_.end());
+        timedTimers_.insert({timer->getTimeStamp(), timer});
+        numberedTimers_.insert({timer->getTimerId(), timer});//集合会自动去重，即是重复插入也不需要担心。（resetTimers中可能重复插入）
+
+        bool earliestChanged = (timedTimers_.begin()->second == timer);
+        if(earliestChanged){
+            resetTimerFd(timer);
+        }
+    }
+
+
+    TimerId cancelTimer(TimerId id){
+        int timerId = id.id();
         channel_->assertInLoopThread();
         auto nTimerIt = numberedTimers_.lower_bound({timerId, reinterpret_cast<Timer*>(0)});
         if(nTimerIt==numberedTimers_.end() || nTimerIt->first != timerId){
@@ -70,13 +90,41 @@ public:
             }
         }else{
             auto tTimerIt = timedTimers_.find({nTimerIt->second->getTimeStamp(), nTimerIt->second});
+            bool earliestChanged = (timedTimers_.begin() == tTimerIt);
+
             delete tTimerIt->second;
             timedTimers_.erase(tTimerIt);
             numberedTimers_.erase(nTimerIt);
+            assert(timedTimers_.size() == numberedTimers_.size());
+
+            if(earliestChanged && !timedTimers_.empty()){
+                resetTimerFd(timedTimers_.begin()->second);
+            }
         }
     }
 
 private:
+
+
+
+
+
+
+    int timerFdReadCallBack(){
+        handlingTimerCallback_ = true;
+        auto expiredTimers = getExpiredTimers();
+        for(Timer* timer:expiredTimers){
+            timer->run();//只有可能在这里有cancelTimer。
+        }
+        handlingTimerCallback_ = false;
+        //在这里，cancelTimer已经执行完了，所以可以不用担心中途再向canceledTimers_插入id。
+        restartTimers(expiredTimers);
+
+        if(!timedTimers_.empty()){
+            resetTimerFd(timedTimers_.begin()->second);
+        }
+    }
+
     std::set<Timer*> getExpiredTimers(){
         StampTimerPair bound = {TimeStamp::now(), reinterpret_cast<Timer*>(std::numeric_limits<ptrdiff_t>::max())};
         auto boundIt = timedTimers_.lower_bound(bound);
@@ -90,34 +138,12 @@ private:
         return timers;
     }
 
-    void insert(Timer* timer){
-        assert(timedTimers_.find({timer->getTimeStamp(), timer})==timedTimers_.end());
-        timedTimers_.insert({timer->getTimeStamp(), timer});
-        numberedTimers_.insert({timer->getTimerId(), timer});//集合会自动去重，即是重复插入也不需要担心。（resetTimers中可能重复插入）
-
-        bool earliestChanged = (timedTimers_.begin()->second == timer);
-        if(earliestChanged){
-            setTimerFd(timer);
-        }
-    }
-
-    int timerFdReadCallBack(){
-        channel_->assertInLoopThread();
-        handlingTimerCallback_ = true;
-        auto expiredTimers = getExpiredTimers();
-        for(Timer* timer:expiredTimers){
-            timer->run();//只有可能在这里有cancelTimer。
-        }
-        handlingTimerCallback_ = false;
-        //在这里，cancelTimer已经执行完了，所以可以不用担心中途再向canceledTimers_插入id。
-        resetTimers(expiredTimers);
-    }    
-
-    void resetTimers(set<Timer*> timers){
+    void restartTimers(set<Timer*> timers){
         for(Timer* timer:timers){
-            if(timer->isRepeat() && canceledTimers_.find(timer->getTimerId())==canceledTimers_.end()){
-                timer->reset();//reset后需要重新插入timedTimers_。
-                insert(timer);
+            bool canceled = (canceledTimers_.find(timer->getTimerId())!=canceledTimers_.end());
+            if(timer->isRepeat() && (!canceled)){
+                timer->toNextTime();//reset后需要重新插入timedTimers_。
+                insertTimer(timer);
             }else{
                 auto nTimerIt = numberedTimers_.lower_bound({timer->getTimerId(), reinterpret_cast<Timer*>(0)});
                 delete nTimerIt->second;
@@ -127,8 +153,7 @@ private:
         canceledTimers_.clear();
     }
 
-
-    void setTimerFd(Timer* timer){
+    void resetTimerFd(Timer* timer){
         detail::setTimerFd(fd_, timer->getTimeStamp());
     }
 

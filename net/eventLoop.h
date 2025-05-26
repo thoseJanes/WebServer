@@ -9,6 +9,7 @@
 #include "poller.h"
 #include <memory>
 #include "../common/mutexLock.h"
+#include "../poller/epollPoller.h"
 #include "sys/eventfd.h"
 using namespace std;
 namespace webserver{
@@ -17,20 +18,34 @@ namespace webserver{
 class Poller;
 class EventLoop{
 public:
-    EventLoop::EventLoop():
-    wakeupFd_(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)), wakeupChannel_(new Channel(wakeupFd_, this)),
-    handlingChannels_(false), handlingPendingFuncs_(false),
-    threadTid_(CurrentThread::tid()), timerQueue_(new TimerQueue(this)){
-        if(hasEventLoop_){
+    EventLoop::EventLoop()
+    :   wakeupFd_(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)), 
+        wakeupChannel_(new Channel(wakeupFd_, this)),
+        handlingChannels_(false), 
+        handlingPendingFuncs_(false),
+        threadTid_(CurrentThread::tid()), 
+        timerQueue_(new TimerQueue(this)),
+        poller_(new EpollPoller(this))
+    {
+        if(t_eventLoop_){
             LOG_FATAL << "Failed in EventLoop construct. This thread already has an EventLoop object.";
         }
-        hasEventLoop_ = true;
-        wakeupChannel_->enableReadableEvent(bind(EventLoop::wakeupCallback, this));
-        wakeupChannel_->update();
+        t_eventLoop_ = this;
+        wakeupChannel_->setReadableCallback(bind(EventLoop::wakeupCallback, this));
+        wakeupChannel_->enableReading();
     }
-    ~EventLoop();//???
     
-    void start(){
+    ~EventLoop(){
+        assert(!running_);
+        wakeupChannel_->disableAll();//为什么要先disable再remove？为什么不直接remove？
+        wakeupChannel_->remove();
+        ::close(wakeupFd_);
+
+        t_eventLoop_ = NULL;
+    }
+    
+    void loop(){
+        assertInLoopThread();
         running_ = true;
         while(running_){
             handlingChannels_ = true;//暂时没用。
@@ -47,7 +62,7 @@ public:
         }
     }
 
-    void stop(){
+    void quit(){
         if(running_){
             running_ = false;
             if(!isInLoopThread()){
@@ -56,17 +71,7 @@ public:
         }
     }
 
-    void runPendingFunctions(){//是否需要状态相关的判断？
-        assertInLoopThread();
-        vector<function<void()>> callingFuncs;
-        {
-            MutexLockGuard lock(mutex_);
-            callingFuncs = std::move(pendingFuncs_);
-        }
-        for(auto func:callingFuncs){
-            func();
-        }
-    }
+
     void runInLoop(function<void()> func){
         if(isInLoopThread()){
             func();
@@ -75,10 +80,7 @@ public:
             wakeup();
         }
     }
-    void updatePendingFunction(function<void()> func){
-        MutexLockGuard lock(mutex_);
-        pendingFuncs_.push_back(func);
-    }
+
     int getSizeOfPendingFunctions(){
         int size;
         {
@@ -90,35 +92,66 @@ public:
 
 
     void updateChannel(Channel* channel){
-        assertInLoopThread();
-        poller_->updateChannel(channel);
+        runInLoop(bind(Poller::updateChannel, poller_, channel));
+        //assertInLoopThread();
+        //poller_->updateChannel(channel);
     }
     void removeChannel(Channel* channel){
+        runInLoop(bind(Poller::removeChannel, poller_, channel));
+        // assertInLoopThread();
+        // //assert()是否应该允许在handlingChannels_时从poller删除channel？
+        // poller_->removeChannel(channel);
+    }
+    bool hasChannel(Channel* channel){
         assertInLoopThread();
-        //assert()是否应该允许在handlingChannels_时从poller删除channel？
-        poller_->removeChannel(channel);
+        return poller_->hasChannel(channel);
     }
 
 
-    int addTimer(TimeStamp time, function<void()> callback){
-        Timer* timer = new Timer(time, callback);
-        runInLoop(bind(&TimerQueue::addTimer, timerQueue_.get(), timer));
-        return timer->getTimerId();
+    TimerId runAt(TimeStamp start, function<void()> callback){
+        Timer* timer = new Timer(start, callback);
+        runInLoop(bind(TimerQueue::insertTimer, timerQueue_.get(), timer));
+        return TimerId(timer->getTimerId());
     }
-    int addRepeatedTimer(TimeStamp time, function<void()> callback, double intervalSeconds){
+    TimerId runEvery(TimeStamp start, function<void()> callback, double intervalSeconds){
         //assertInLoopThread();
-        Timer* timer = new Timer(time, callback, intervalSeconds);
-        runInLoop(bind(&TimerQueue::addTimer, timerQueue_.get(), timer));
-        return timer->getTimerId();
+        Timer* timer = new Timer(start, callback, intervalSeconds);
+        runInLoop(bind(&TimerQueue::insertTimer, timerQueue_.get(), timer));
+        return TimerId(timer->getTimerId());
     }
-    void cancelTimer(int timerId){
+    void cancelTimer(TimerId timerId){
         //assertInLoopThread();
         runInLoop(bind(&TimerQueue::cancelTimer, timerQueue_.get(), timerId));
     }
 
 
+    void assertInLoopThread(){
+        assert(isInLoopThread());
+    }
+    bool isInLoopThread(){
+        return threadTid_ == CurrentThread::tid();
+    }
+    static EventLoop* getThreadEventLoop(){
+        return t_eventLoop_;
+    }
+private:
+    void runPendingFunctions(){//是否需要状态相关的判断？
+        assertInLoopThread();
+        vector<function<void()>> callingFuncs;
+        {
+            MutexLockGuard lock(mutex_);
+            callingFuncs = std::move(pendingFuncs_);
+        }
+        for(auto func:callingFuncs){
+            func();
+        }
+    }
+    void updatePendingFunction(function<void()> func){
+        MutexLockGuard lock(mutex_);
+        pendingFuncs_.push_back(func);
+    }
     void wakeup(){
-        //即是是在自己线程，也需要wakeup。不过由于readWakeupFd也是在自己线程，所以，可能刚wakeup，然后就被readWakeupFd读取走了？
+        //即使是在自己线程，也需要wakeup。不过由于readWakeupFd也是在自己线程，所以，可能刚wakeup，然后就被readWakeupFd读取走了？
         //但是这也没关系，因为wakeup就是为了唤醒epoll_wait而存在的。
         int64_t buf = 1;
         int n = write(wakeupFd_, &buf, sizeof(buf));
@@ -135,15 +168,6 @@ public:
         }
     }
 
-
-    void assertInLoopThread(){
-        assert(isInLoopThread());
-    }
-    bool isInLoopThread(){
-        return threadTid_ == CurrentThread::tid();
-    }
-
-private:
     std::vector<function<void()>> pendingFuncs_;
     bool running_;
 
@@ -151,15 +175,13 @@ private:
     unique_ptr<TimerQueue> timerQueue_;
     MutexLock mutex_;//用于保护timerQueue_
     
-
-    static __thread bool hasEventLoop_;
+    static __thread EventLoop* t_eventLoop_;
     int wakeupFd_;
-    Channel* wakeupChannel_;
+    unique_ptr<Channel> wakeupChannel_;
     pid_t threadTid_;
 
     bool handlingChannels_;
     bool handlingPendingFuncs_;
-    
 };
 
 

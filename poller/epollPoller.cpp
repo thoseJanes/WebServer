@@ -1,6 +1,6 @@
 #include "epollPoller.h"
 
-#include <sys/epoll.h>
+
 #include "../net/channel.h"
 #include "../net/eventLoop.h"
 
@@ -11,8 +11,12 @@ EpollPoller::EpollPoller(EventLoop* loop):pollFd_(epoll_create(4096)), loop_(loo
 }
 
 
+EpollPoller::~EpollPoller(){
+    ::close(pollFd_);
+}
+
 std::vector<Channel*> EpollPoller::poll(){
-    loop_->assertInLoopThread();
+    //loop_->assertInLoopThread();
     std::vector<Channel*> channels;
     int n = epoll_wait(pollFd_, events_.data(), events_.size(), -1);
     for(int i=0;i<n;i++){
@@ -29,40 +33,40 @@ std::vector<Channel*> EpollPoller::poll(){
 
 
 void EpollPoller::updateChannel(Channel* channel){
-    if(channel->getPollState() == Channel::None || channel->getPollState() == Channel::Deleted){
+    if(channel->getPollState() == Channel::sNone || channel->getPollState() == Channel::sDeleted){
         LOG_ERR << "Conflict fd in channelsMap.";
         channelsMap_.insert({channel->getFd(), channel});
-        channel->setPollState(Channel::Disabled);
+        channel->setPollState(Channel::sDisabled);
     }
 
     assert(channelsMap_.find(channel->getFd()) != channelsMap_.end());
     assert(channelsMap_.find(channel->getFd())->second == channel);
 
-    if(channel->getPollState() == Channel::Disabled){
+    if(channel->getPollState() == Channel::sDisabled){
         if(channel->hasEvent()){
             epoll_event event = eventOfChannel(channel);
             epoll_ctl(pollFd_, EPOLL_CTL_ADD, channel->getFd(), &event);
-            channel->setPollState(Channel::Active);
+            channel->setPollState(Channel::sActive);
         }
-    }else if(channel->getPollState() == Channel::Active){
+    }else if(channel->getPollState() == Channel::sActive){
         if(channel->hasEvent()){
             epoll_event event = eventOfChannel(channel);
             epoll_ctl(pollFd_, EPOLL_CTL_MOD, channel->getFd(), &event);
         }else{
             epoll_ctl(pollFd_, EPOLL_CTL_DEL, channel->getFd(), NULL);
-            channel->setPollState(Channel::Disabled);
+            channel->setPollState(Channel::sDisabled);
         }
     }
 }
 
 void EpollPoller::removeChannel(Channel* channel){
     channelsMap_.erase(channel->getFd());
-    if(channel->getPollState() == Channel::Active){
+    if(channel->getPollState() == Channel::sActive){
         epoll_ctl(pollFd_, EPOLL_CTL_DEL, channel->getFd(), NULL);
-    }else if(channel->getPollState() != Channel::Disabled){
+    }else if(channel->getPollState() != Channel::sDisabled){
         LOG_FATAL << "Failed in removeChannel(). Channel not in map.";
     }
-    channel->setPollState(Channel::Deleted);
+    channel->setPollState(Channel::sDeleted);
 }
 
 epoll_event EpollPoller::eventOfChannel(Channel* channel){
@@ -72,7 +76,9 @@ epoll_event EpollPoller::eventOfChannel(Channel* channel){
     return event;
 }
 
-
+bool EpollPoller::hasChannel(Channel* channel){
+    return (channelsMap_.find(channel->getFd())!=channelsMap_.end());
+}
 
 
 

@@ -3,7 +3,7 @@
 
 namespace webserver{
 
-namespace detail{//不仅为了包装，也为了过滤一些错误。留下待处理的错误。
+namespace sockets{//不仅为了包装，也为了过滤一些错误。留下待处理的错误。
 
     int enableFdOption(int fd, int option){
         int oldOption = ::fcntl(fd, F_GETFL);
@@ -39,14 +39,10 @@ namespace detail{//不仅为了包装，也为了过滤一些错误。留下待�
         int connfd = ::accept(fd, (sockaddr*)addr, &addrLen);
         if(connfd<0){
             switch(errno){
-
+                //各种错误处理，待学习
             }
         }
         return connfd;
-    }
-
-    int connect(int fd, UnionAddr* addr){
-        return ::connect(fd, (sockaddr*)addr, sizeof(UnionAddr))<0;
     }
 
     void shutDownWrite(int fd){
@@ -57,10 +53,11 @@ namespace detail{//不仅为了包装，也为了过滤一些错误。留下待�
 
     
 }
-void Socket::bind(InetAddress addr){detail::bindOrDie(fd_, addr.getAddr());}
-void Socket::listen(){detail::listenOrDie(fd_, 4096);}
-int Socket::accept(InetAddress& addr){return detail::accept(fd_, addr.getAddr());}
+
+void Socket::bind(InetAddress addr){sockets::bindOrDie(fd_, addr.getAddr());}
+void Socket::listen(){sockets::listenOrDie(fd_, 4096);}
+int Socket::accept(InetAddress& addr){return sockets::accept(fd_, addr.getAddr());}
 //int connect(InetAddress addr){return detail::connect(fd_, addr.getAddr());}
-void Socket::shutDownWrite(){detail::shutDownWrite(fd_);}
+void Socket::shutDownWrite(){sockets::shutDownWrite(fd_);}
 
 }

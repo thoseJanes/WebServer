@@ -1,15 +1,19 @@
 #ifndef WEBSERVER_NET_INETADDRESS_H
 #define WEBSERVER_NET_INETADDRESS_H
 
-#include <sys/socket.h>
+// #include <sys/socket.h>
+
+// #include <stdint.h>
+
+// #include <stddef.h>
+// #include <memory.h>
 #include <netinet/in.h>
-#include <stdint.h>
-#include <string_view>
 #include <arpa/inet.h>
-#include <stddef.h>
-#include <memory.h>
+#include <string_view>
 #include "../logging/logger.h"
 
+//INADDR_LOOPBACK
+//IN6ADDR_LOOPBACK_INIT
 using namespace std;
 namespace webserver{
 
@@ -18,55 +22,18 @@ union UnionAddr{
     sockaddr_in6 addr6;
 };
 
-namespace detail{
-    sockaddr* toSockaddrPtr(sockaddr_in* addr){
-        return static_cast<sockaddr*>(static_cast<void*>(addr));
-    }
-    sockaddr* toSockaddrPtr(sockaddr_in6* addr){
-        return static_cast<sockaddr*>(static_cast<void*>(addr));
-    }
+namespace sockets{
+    sockaddr* toSockaddrPtr(sockaddr_in* addr);
+    sockaddr* toSockaddrPtr(sockaddr_in6* addr);
 
-    sockaddr_in* toSockaddrInPtr(sockaddr* addr){
-        return static_cast<sockaddr_in*>(static_cast<void*>(addr));
-    }
-    sockaddr_in6* toSockaddrIn6Ptr(sockaddr* addr){
-        return static_cast<sockaddr_in6*>(static_cast<void*>(addr));
-    }
+    sockaddr_in* toSockaddrInPtr(sockaddr* addr);
+    sockaddr_in6* toSockaddrIn6Ptr(sockaddr* addr);
 
-    void getPeerAddr(int fd, UnionAddr* addr){
-        //sockaddr_in6 addr;
-        socklen_t addrLen = sizeof(UnionAddr);
-        
-        if(getpeername(fd, (sockaddr*)addr, &addrLen)<0){
-            LOG_FATAL << "getPeerAddr failed";
-        }
-    }
+    void getPeerAddr(int fd, UnionAddr* addr);
+    //是否要保证传入值必须得有sockaddr_in6的空间？如何保证？用InetAddress？
+    void getHostAddr(int fd, UnionAddr* addr);
 
-    void getHostAddr(int fd, UnionAddr* addr){//是否要保证传入值必须得有sockaddr_in6的空间？如何保证？用InetAddress？
-        //sockaddr_in6 addr;
-        socklen_t addrLen = sizeof(UnionAddr);
-        
-        if(getsockname(fd, (sockaddr*)addr, &addrLen)<0){
-            LOG_FATAL << "getPeerAddr failed";
-        }
-    }
-
-    bool isSelfConnect(int fd){
-        UnionAddr hAddr; memset(&hAddr, 0, sizeof(UnionAddr));
-        UnionAddr pAddr; memset(&pAddr, 0, sizeof(UnionAddr));
-        getHostAddr(fd, &hAddr);
-        getPeerAddr(fd, &pAddr);
-        if(hAddr.addr.sin_family == AF_INET){
-            return hAddr.addr.sin_addr.s_addr == pAddr.addr.sin_addr.s_addr 
-                    && hAddr.addr.sin_port == pAddr.addr.sin_port;
-        }else if(hAddr.addr6.sin6_family == AF_INET6){
-            return memcmp(&hAddr.addr6.sin6_addr, &pAddr.addr6.sin6_addr, sizeof(in6_addr))
-                    && hAddr.addr6.sin6_port == pAddr.addr6.sin6_port;
-        }else{
-            LOG_FATAL << "unknow address faimily:" << hAddr.addr.sin_family << ".";
-        }
-    }
-
+    bool isSelfConnect(int fd);
 }
 
 class InetAddress{
@@ -83,6 +50,36 @@ public:
             inet_pton(family, ip.data(), &addr_.sin_addr);
         }else{
             inet_pton(family, ip.data(), &addr6_.sin6_addr);
+        }
+    }
+
+    InetAddress(in_addr_t ip = INADDR_ANY, in_port_t port = 0){
+        memset(&addr6_, 0, sizeof(addr6_));
+        addr_.sin_addr.s_addr = ip;
+        addr_.sin_port = port;
+        addr_.sin_family = AF_INET;
+    }
+
+    string toString(){
+        char buf[64];
+        if(addr_.sin_family == AF_INET){
+            inet_ntop(addr_.sin_family, &addr_.sin_addr, buf, sizeof(buf));
+            size_t end = strlen(buf);
+            buf[end++] = ':';
+            end += detail::formatInteger(buf+end, ntohs(addr_.sin_port));
+            buf[end] = '\0';
+            return string(buf, end);
+        }else if(addr_.sin_family == AF_INET6){
+            buf[0] = '[';
+            inet_ntop(addr6_.sin6_family, &addr6_.sin6_addr, buf, sizeof(buf));
+            size_t end = strlen(buf);
+            buf[end++] = ']'; 
+            buf[end++] = ':';
+            end += detail::formatInteger(buf+end, ntohs(addr_.sin_port));
+            buf[end] = '\0';
+            return string(buf, end);
+        }else{
+            return "[unknowAddress]";
         }
     }
 

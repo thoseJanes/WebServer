@@ -12,7 +12,7 @@ public:
         if(reusePort){
             socket_.setReusePort(true);
         }
-        channel_->setReadableCallback(bind(Acceptor::acceptableCallback, this));
+        channel_->setReadableCallback(bind(&Acceptor::acceptableCallback, this));
         placeholderFd_ = sockets::createNonblockingSocket();//因为Socket会管理fd的生命周期，因此不能用Socket创建。
     }
 
@@ -27,14 +27,14 @@ public:
     }
     
     void listen(){
-        channel_->assertInLoopThread();
+        loop_->assertInPendingFunctors();
         listening_ = true;
-        socket_.listen();
         channel_->enableReading();
+        socket_.listen();
     }
 
     void acceptableCallback(){
-        channel_->assertInLoopThread();
+        loop_->assertInChannelHandling();
         assert(listening_);
         InetAddress addr;
         int connfd = socket_.accept(addr);

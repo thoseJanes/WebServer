@@ -19,7 +19,7 @@ public:
     Channel(int fd, EventLoop* loop)
     :fd_(fd), loop_(loop), state_(sNone), event_(kNoneEvent), revent_(kNoneEvent), tied_(false){}
     ~Channel(){
-        assert(state_ == sNone || state_ == sDeleted);
+        assert(state_ == sNone || state_ == sDeleted);//为什么不在析构函数中将channelremove出poller？
     }
     void update();
     void remove();
@@ -29,7 +29,7 @@ public:
     void setErrorCallback(function<void()> func){errorCallback_ = func;}
     void setCloseCallback(function<void()> func){closeCallback_ = func;}
     void enableReading(){event_ |= kReadingEvent; update();}
-    void enableWritting(function<void()> func){event_ |= kWrittingEvent; update();}
+    void enableWritting(){event_ |= kWrittingEvent; update();}
     void disableAll(){event_ &= kNoneEvent; update();}
     bool isReadingEnabled(){return (event_ & kReadingEvent);}
     bool isWrittingEnabled(){return (event_ & kWrittingEvent);}
@@ -73,8 +73,8 @@ public:
         revent_ = revent;
     }
 
-    void tie(std::any t){
-        tie_ = t;
+    void tie(weak_ptr<std::any> t){
+        tie_ = t.lock();
         tied_ = true;
     }
     void untie(){

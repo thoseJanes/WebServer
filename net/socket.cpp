@@ -51,6 +51,13 @@ namespace sockets{//不仅为了包装，也为了过滤一些错误。留下待
         }
     }
 
+    int getSocketError(int fd){
+        int err;
+        socklen_t len = sizeof(err);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
+        return err;
+    }
+
     
 }
 

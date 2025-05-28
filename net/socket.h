@@ -16,6 +16,7 @@ namespace webserver{
 namespace sockets{
 int createNonblockingSocket();
 int connect(int fd, UnionAddr* addr);
+int getSocketError(int fd);
 }
 
 
@@ -30,7 +31,7 @@ public:
     //int connect(InetAddress addr){return detail::connect(fd_, addr.getAddr());}
     void shutDownWrite();
 
-    static Socket nonblockingSocket(){return Socket(detail::createNonblockingSocket());}
+    static Socket nonblockingSocket(){return Socket(sockets::createNonblockingSocket());}
     void setTcpNoDelay(bool val){
         int optVal = val;
         if(setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &optVal, sizeof(optVal))){

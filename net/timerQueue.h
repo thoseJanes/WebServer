@@ -50,7 +50,7 @@ public:
         channel_(new Channel(fd_, eventLoop)), 
         handlingTimerCallback_(false)
     {
-        channel_->setReadableCallback(std::bind(timerFdReadCallBack, this));
+        channel_->setReadableCallback(std::bind(&TimerQueue::timerFdReadCallBack, this));
         channel_->enableReading();//更新到eventLoop中。但是如果此时poller还未生成呢？
     }
     ~TimerQueue(){
@@ -77,29 +77,32 @@ public:
         }
     }
 
-
-    TimerId cancelTimer(TimerId id){
+    //未找到则返回false
+    bool cancelTimer(TimerId id){
         int timerId = id.id();
-        channel_->assertInLoopThread();
+        assert(timerId >= 0);
+        channel_->assertInLoopThread();//可能在channel中，也可能在pendingFunctors。其实可以全部放进pendingFunctors中？但是这样，如果在执行channel时删除定时器，那么删除操作会被推迟。
         auto nTimerIt = numberedTimers_.lower_bound({timerId, reinterpret_cast<Timer*>(0)});
-        if(nTimerIt==numberedTimers_.end() || nTimerIt->first != timerId){
-            if(handlingTimerCallback_){//如果没有在执行回调，那么应该是能找到的？否则就是timer已经执行完毕了。即使在执行回调，用的也是timedTimers_？
+        if(nTimerIt==numberedTimers_.end() || nTimerIt->first != timerId){//在numberedTimers中寻找，如果没有找到，则一定是已经执行完了。
+            LOG_ERR << "Failed in cancelTimer(). Can't find timer " << timerId << ".";
+            return false;
+        }else{//找到了，可能刚开始执行，或者还没执行。
+            if(handlingTimerCallback_){
                 canceledTimers_.insert(timerId);
-            }else{
-                LOG_ERR << "Failed in cancelTimer(). Can't find timer " << timerId << ".";
-            }
-        }else{
-            auto tTimerIt = timedTimers_.find({nTimerIt->second->getTimeStamp(), nTimerIt->second});
-            bool earliestChanged = (timedTimers_.begin() == tTimerIt);
+            }else{//可能定时器已经被执行完了。
+                auto tTimerIt = timedTimers_.find({nTimerIt->second->getTimeStamp(), nTimerIt->second});
+                bool earliestChanged = (timedTimers_.begin() == tTimerIt);
 
-            delete tTimerIt->second;
-            timedTimers_.erase(tTimerIt);
-            numberedTimers_.erase(nTimerIt);
-            assert(timedTimers_.size() == numberedTimers_.size());
+                delete tTimerIt->second;
+                timedTimers_.erase(tTimerIt);
+                numberedTimers_.erase(nTimerIt);
+                assert(timedTimers_.size() == numberedTimers_.size());
 
-            if(earliestChanged && !timedTimers_.empty()){
-                resetTimerFd(timedTimers_.begin()->second);
+                if(earliestChanged && !timedTimers_.empty()){
+                    resetTimerFd(timedTimers_.begin()->second);
+                }
             }
+            return true;
         }
     }
 
@@ -119,6 +122,7 @@ private:
         handlingTimerCallback_ = false;
         //在这里，cancelTimer已经执行完了，所以可以不用担心中途再向canceledTimers_插入id。
         restartTimers(expiredTimers);
+        
 
         if(!timedTimers_.empty()){
             resetTimerFd(timedTimers_.begin()->second);

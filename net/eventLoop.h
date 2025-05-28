@@ -31,7 +31,7 @@ public:
             LOG_FATAL << "Failed in EventLoop construct. This thread already has an EventLoop object.";
         }
         t_eventLoop_ = this;
-        wakeupChannel_->setReadableCallback(bind(EventLoop::wakeupCallback, this));
+        wakeupChannel_->setReadableCallback(bind(&EventLoop::wakeupCallback, this));
         wakeupChannel_->enableReading();
     }
     
@@ -93,12 +93,12 @@ public:
 
 
     void updateChannel(Channel* channel){
-        runInLoop(bind(Poller::updateChannel, poller_, channel));
+        runInLoop(bind(&Poller::updateChannel, poller_, channel));
         //assertInLoopThread();
         //poller_->updateChannel(channel);
     }
     void removeChannel(Channel* channel){
-        runInLoop(bind(Poller::removeChannel, poller_, channel));
+        runInLoop(bind(&Poller::removeChannel, poller_, channel));
         // assertInLoopThread();
         // //assert()是否应该允许在handlingChannels_时从poller删除channel？
         // poller_->removeChannel(channel);
@@ -111,7 +111,7 @@ public:
 
     TimerId runAt(TimeStamp start, function<void()> callback){
         Timer* timer = new Timer(start, callback);
-        runInLoop(bind(TimerQueue::insertTimer, timerQueue_.get(), timer));
+        runInLoop(bind(&TimerQueue::insertTimer, timerQueue_.get(), timer));
         return TimerId(timer->getTimerId());
     }
     TimerId runEvery(TimeStamp start, function<void()> callback, double intervalSeconds){
@@ -122,12 +122,18 @@ public:
     }
     void cancelTimer(TimerId timerId){
         //assertInLoopThread();
-        runInLoop(bind(&TimerQueue::cancelTimer, timerQueue_.get(), timerId));
+        runInLoop(bind(&TimerQueue::cancelTimer, timerQueue_.get(), timerId));//只能尽力而为地删除。
     }
 
 
     void assertInLoopThread(){
         assert(isInLoopThread());
+    }
+    void assertInChannelHandling(){
+        assert(isInLoopThread() && handlingChannels_);
+    }
+    void assertInPendingFunctors(){
+        assert(isInLoopThread() && handlingPendingFuncs_);
     }
     bool isInLoopThread(){
         return threadTid_ == CurrentThread::tid();

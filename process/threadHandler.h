@@ -12,8 +12,9 @@ using namespace std;
 namespace webserver{
 
 struct ThreadData{
-    function<void()> func;
     string name;
+    function<void()> func;
+    function<void()> threadInitCallback;
     CountDownLatch* latch;
     pid_t* getTid;
 };
@@ -23,15 +24,16 @@ void* runInThread(void* threadData);
 class ThreadHandler{
 public:
     ThreadHandler(function<void()> func, string name = "")
-    :func_(std::move(func)), name_(name), started_(false), joined_(false){
+    :func_(std::move(func)), name_(name), started_(false), joined_(false), handlerThreadTid_(CurrentThread::tid()){
         if(name.empty()){
             initName();
         }
     }
     void start(){
+        assertInHandlerThread();
         assert(!started_);
         CountDownLatch latch_(1);
-        ThreadData data{func_, name_, &latch_, &tid_};
+        ThreadData data{name_, func_, threadInitCallback_, &latch_, &tid_};
         if(0 == pthread_create(&thread_, NULL, runInThread, &data)){
             started_ = true;
             latch_.wait();//threadHandler只会被同一个线程操作吗？
@@ -41,6 +43,7 @@ public:
         }
     }
     ~ThreadHandler(){
+        assertInHandlerThread();
         if(started_&&(!joined_)){//join后，thread_会变成NULL？不会！！
             pthread_detach(thread_);
         }
@@ -71,14 +74,30 @@ public:
         name_ = buf;
     }
     void setName(string name){
+        assertInHandlerThread();
+        assert(!started_);
         name_ = std::move(name);
     }
-    void setFunc();
+    void setThreadFunc(function<void()> cb){
+        assertInHandlerThread();
+        assert(!started_);
+        func_ = cb;
+    }
+    void setInitThreadCallback(function<void()> cb){
+        assertInHandlerThread();
+        assert(!started_);
+        threadInitCallback_ = cb;
+    }
+    void assertInHandlerThread(){
+        assert(handlerThreadTid_ == CurrentThread::tid());
+    }
 private:
     pthread_t thread_;
+    pid_t handlerThreadTid_;
     pid_t tid_;
     string name_;
     function<void()> func_;
+    function<void()> threadInitCallback_;
     static atomic<int> counter;
     bool started_;
     bool joined_;

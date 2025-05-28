@@ -6,6 +6,15 @@
 
 using namespace webserver;
 
+static_assert(POLLOUT == EPOLLOUT, "event flags of poll and epoll not equal.");
+static_assert(POLLIN == EPOLLIN, "event flags of poll and epoll not equal.");
+static_assert(POLLPRI == EPOLLPRI, "event flags of poll and epoll not equal.");
+static_assert(POLLHUP == EPOLLHUP, "event flags of poll and epoll not equal.");
+static_assert(POLLRDHUP == EPOLLRDHUP, "event flags of poll and epoll not equal.");
+static_assert(POLLERR == EPOLLERR, "event flags of poll and epoll not equal.");
+//static_assert(POLLNVAL == , "event flags of poll and epoll not equal."); epoll没有POLLNVAL吗？为什么？
+
+
 EpollPoller::EpollPoller(EventLoop* loop):pollFd_(epoll_create(4096)), loop_(loop){
     events_.resize(16);
 }

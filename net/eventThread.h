@@ -9,14 +9,22 @@ namespace webserver{
 class EventThread{
 public:
     EventThread()
-    :   thread_(bind(EventThread::threadFunc, this)), 
+    :   thread_(bind(&EventThread::threadFunc, this)), 
         mutex_(), 
         cond_(mutex_),
-        loop_(NULL),
+        loop_(NULL)
     {
 
     }
     ~EventThread(){
+        join();
+    }
+
+    void join(){
+        if(loop_){
+            loop_->quit();
+            thread_.join();
+        }
     }
 
     void start(){
@@ -29,17 +37,16 @@ public:
         }
     }
 
-    void join(){
-        if(loop_){
-            loop_->quit();
-            thread_.join();
-        }
-    }
-
     EventLoop* getLoop(){
+        MutexLockGuard lock(mutex_);
         return loop_;
     }
     
+    void setThreadInitCallback(function<void()> func){
+        assert(!thread_.started());
+        thread_.assertInHandlerThread();
+        threadInitCallback_ = func;
+    }
 private:
     void threadFunc(){
         EventLoop loop;
@@ -61,6 +68,7 @@ private:
     MutexLock mutex_;
     Condition cond_;
     EventLoop* loop_;
+    function<void()> threadInitCallback_;
 };
 
 }

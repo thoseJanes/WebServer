@@ -38,7 +38,9 @@ private:
 class TimerId{
 public:
     explicit TimerId(int id):timerId_(id){};
+    TimerId():timerId_(-1){};
     int id(){return timerId_;}
+    int valid(){return timerId_>=0;}
 private:
     int timerId_;
 };

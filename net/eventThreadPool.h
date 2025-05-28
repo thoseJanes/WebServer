@@ -10,9 +10,10 @@ public:
         baseLoop_.reset(baseLoop);
     }
 
-    void start(){
+    void start(function<void()> threadInitCallback){
         for(int i=0;i<threadNum_;i++){
             eventThreads_.emplace_back(new EventThread());
+            eventThreads_[i]->setThreadInitCallback(threadInitCallback);
             eventThreads_[i]->start();
         }
     }

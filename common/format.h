@@ -32,7 +32,7 @@ namespace detail{
         buf[len] = '\0';
         std::reverse(buf, buf+len);
 
-        return len + negative;
+        return static_cast<size_t>(len + negative);
     }
 
     template<typename T, int DIGIT = 10>

@@ -1,93 +1,130 @@
 #ifndef WEBSERVER_NET_TCPCONNECTION_H
 #define WEBSERVER_NET_TCPCONNECTION_H
 
-#include "channel.h"
+
 #include "inetAddress.h"
 #include "connBuffer.h"
-#include "eventLoop.h"
+#include "socket.h"
+#include "../event/channel.h"
+#include "../event/eventLoop.h"
+#include "../process/currentThread.h"
 #include <functional>
 #include <memory>
 namespace webserver{
+class TcpConnection;
+typedef std::function<void(const shared_ptr<TcpConnection>&, ConnBuffer* buffer, TimeStamp timeStamp)> MessageCallback;
+typedef std::function<void(const shared_ptr<TcpConnection>&)> ConnectCallback;
+typedef std::function<void(const shared_ptr<TcpConnection>&)> WriteCompleteCallback;
+typedef std::function<void(const shared_ptr<TcpConnection>&, size_t)> HighWaterCallback;
+typedef std::function<void(const shared_ptr<TcpConnection>&)> CloseCallback;
+namespace detail{
+    void defaultMessageCallback(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp timeStamp);
 
-class TcpConnection{
+    void defaultConnectCallback(const shared_ptr<TcpConnection>& conn);
+}
+
+//用法：[setHighWaterCallback]->控制send或者read
+class TcpConnection : public enable_shared_from_this<TcpConnection>{
 public:
-    TcpConnection(int fd, EventLoop* loop)
-    :   loop_(loop), 
-        channel_(new Channel(fd, loop)),
-        hostAddr_(),
-        peerAddr_()
-    {
-        sockets::getHostAddr(fd, hostAddr_.getAddr());
-        sockets::getPeerAddr(fd, hostAddr_.getAddr());
-        channel_->setCloseCallback(closeCallback_);
-        channel_->setErrorCallback(errorCallback_);
-        channel_->setReadableCallback(bind(&TcpConnection::handleRead, this));
-        channel_->setWritableCallback(bind(&TcpConnection::handleWrite, this));
-        channel_->enableReading();
-        channel_->enableWritting();
-    }
 
-    void send(string_view str){
-        if(loop_->isInLoopThread()){
-            sendInLoop(str.data(), str.size());
-        }else{
-            loop_->runInLoop(bind<void(TcpConnection::*)(string)>(&TcpConnection::sendInLoop, this, string(str)));
+    typedef ConnBuffer Buffer;
+
+    enum ConnState{
+        sDisConnected,
+        sDisConnecting,
+        sConnected,
+        sConnecting,
+    };
+    struct State{
+        ConnState connState;
+        bool isWriting;
+        bool isReading;
+        bool shutdown;
+        size_t bytesToBeSent;
+        void setConnectionState(ConnState state){
+            connState = state;
         }
+    };
+
+    TcpConnection(int fd, string_view name, EventLoop* loop);
+
+    void setHighWaterCallback(size_t highWaterBytes, HighWaterCallback cb){
+        highWaterBytes_ = highWaterBytes;
+        highWaterCallback_ = cb;
+    }
+    void setWriteCompleteCallback(WriteCompleteCallback cb){
+        writeCompleteCallback_ = cb;
+    }
+    void setCloseCallback(CloseCallback cb){
+        closeCallback_ = cb;
+    }
+    void setMessageCallback(MessageCallback cb){
+        messageCallback_ = cb;
+    }
+    void setConnectCallback(ConnectCallback cb){
+        connectCallback_ = cb;
     }
 
-    void send(ConnBuffer* buffer){
-        if(loop_->isInLoopThread()){
-            sendInLoop(buffer->retrieveAllAsString());
-        }else{
-            loop_->runInLoop(bind<void(TcpConnection::*)(string)>(&TcpConnection::sendInLoop, this, buffer->retrieveAllAsString()));
-        }
+    void setTcpNoDelay(bool bl);
+
+    void send(const char* buf, size_t len);
+    void send(string_view str);
+    void send(ConnBuffer* buffer);
+
+    void startRead();
+    void stopRead();
+
+
+    void forceClose();
+    void closeInLoop();
+
+    void shutdownWrite();
+
+    ~TcpConnection(){
+
     }
 
-    void sendInLoop(string str){
-        sendInLoop(str.data(), str.size());
+    string hostAddressString() const {
+        return hostAddr_.toString();
     }
-
-    void sendInLoop(const char* data, size_t len){
-        loop_->assertInLoopThread();
-        //什么情况下可以直接发送数据?
-        outputBuffer_.append(data, len);
+    string peerAddressString() const {
+        return peerAddr_.toString();
     }
-
-
-    void handleWrite(){
-        loop_->assertInChannelHandling();
-        auto remain = outputBuffer_.readableBytes();
-        if(remain > 0){
-            ssize_t n = ::send(channel_->getFd(), outputBuffer_.readerBegin(), outputBuffer_.readableBytes(), NULL);
-            remain -= static_cast<size_t>(n);
-            if(remain==0 && writeCompleteCallback_){
-                writeCompleteCallback_();
-            }
-        }
+    string nameString() const {
+        return name_;
     }
-    void handleRead(){
-        loop_->assertInChannelHandling();
-        inputBuffer_.readFromFd(channel_->getFd());
-        if(messageCallback_){
-            messageCallback_(inputBuffer_.retrieveAllAsString());
-        }
-        //inputBuffer_.retrieveAll();???是否需要？
-    }
-
-
-    ~TcpConnection();
+    
 private:
+    void shutdownInLoop();
+
+    void handleWrite();
+    void handleRead();
+    void handleError();
+    void handleClose();
+
+    void startReadInLoop();
+    void stopInReadLoop();
+
+    void sendInLoop(string str);
+    void sendInLoop(const char* data, size_t len);
+    State state_;
     EventLoop* loop_;
     unique_ptr<Channel> channel_;
-    InetAddress hostAddr_;
-    InetAddress peerAddr_;
+    Socket socket_;
+    const InetAddress hostAddr_;
+    const InetAddress peerAddr_;
     ConnBuffer inputBuffer_;
     ConnBuffer outputBuffer_;
 
-    std::function<void(string data)> messageCallback_;//读到数据
-    std::function<void()> writeCompleteCallback_;//写完数据
-    std::function<void()> closeCallback_;
-    std::function<void()> errorCallback_;
+    MessageCallback messageCallback_;//读到数据
+    ConnectCallback connectCallback_;
+    WriteCompleteCallback writeCompleteCallback_;//写完数据
+    HighWaterCallback highWaterCallback_;
+    CloseCallback closeCallback_;
+
+    size_t highWaterBytes_;
+    string name_;
+    
 };
 
 }

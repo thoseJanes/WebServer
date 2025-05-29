@@ -77,9 +77,17 @@ public:
         if(isInLoopThread()){
             func();
         }else{
-            updatePendingFunction(std::move(func));
+            queueInLoop(std::move(func));
+        }
+    }
+
+    void queueInLoop(function<void()> func){
+        MutexLockGuard lock(mutex_);
+        pendingFuncs_.push_back(func);
+        if(!handlingChannels_){
             wakeup();
         }
+        
     }
 
     int getSizeOfPendingFunctions(){
@@ -163,10 +171,7 @@ private:
             func();
         }
     }
-    void updatePendingFunction(function<void()> func){
-        MutexLockGuard lock(mutex_);
-        pendingFuncs_.push_back(func);
-    }
+
 
     void wakeupCallback(){
         //assertInLoopThread();这个assert会在channel中保证，这里不需要担心它。

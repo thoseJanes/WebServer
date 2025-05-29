@@ -8,24 +8,13 @@ namespace webserver{
 //假设start和析构在同一个线程中。仍有可能在loop之前quit。这个问题要如何解决？
 class EventThread{
 public:
-    EventThread()
-    :   thread_(bind(&EventThread::threadFunc, this)), 
+    EventThread(string_view name)
+    :   thread_(bind(&EventThread::threadFunc, this), name), 
         mutex_(), 
         cond_(mutex_),
         loop_(NULL)
-    {
+    {}
 
-    }
-    ~EventThread(){
-        join();
-    }
-
-    void join(){
-        if(loop_){
-            loop_->quit();
-            thread_.join();
-        }
-    }
 
     void start(){
         thread_.start();
@@ -45,7 +34,19 @@ public:
     void setThreadInitCallback(function<void()> func){
         assert(!thread_.started());
         thread_.assertInHandlerThread();
-        threadInitCallback_ = func;
+        //threadInitCallback_ = func;
+        thread_.setInitThreadCallback(func);
+    }
+
+    ~EventThread(){
+        join();
+    }
+
+    void join(){
+        if(loop_){
+            loop_->quit();
+            thread_.join();
+        }
     }
 private:
     void threadFunc(){
@@ -68,7 +69,7 @@ private:
     MutexLock mutex_;
     Condition cond_;
     EventLoop* loop_;
-    function<void()> threadInitCallback_;
+    //function<void()> threadInitCallback_;
 };
 
 }

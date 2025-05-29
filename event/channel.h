@@ -29,10 +29,12 @@ public:
     void setErrorCallback(function<void()> func){errorCallback_ = func;}
     void setCloseCallback(function<void()> func){closeCallback_ = func;}
     void enableReading(){event_ |= kReadingEvent; update();}
-    void enableWritting(){event_ |= kWrittingEvent; update();}
+    void enableWriting(){event_ |= kWritingEvent; update();}
+    void disableReading(){event_ &= ~kReadingEvent; update();}
+    void disableWriting(){event_ &= ~kWritingEvent; update();}
     void disableAll(){event_ &= kNoneEvent; update();}
     bool isReadingEnabled(){return (event_ & kReadingEvent);}
-    bool isWrittingEnabled(){return (event_ & kWrittingEvent);}
+    bool isWritingEnabled(){return (event_ & kWritingEvent);}
 
     void handleEvent(){
         if(tied_){
@@ -99,7 +101,7 @@ private:
     bool tied_;
 
     static int kReadingEvent;
-    static int kWrittingEvent;
+    static int kWritingEvent;
     static int kNoneEvent;
 };
 

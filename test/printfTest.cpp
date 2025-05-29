@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "../common/patterns.h"
-
 using namespace webserver;
 class TestClass{
     friend Singleton<TestClass>;
@@ -23,8 +22,7 @@ void getFile(const char file[]){
     //printf("%d\n", (int)strlen(file));
 }
 
-using namespace std;
-int main() {
+void printfFormatTest(){
     char buf[255]; int bufSize = 255; int formatSize; int precision;
     printf("%ld", sizeof buf);
     std::vector<double> testNums = {-123.456789*pow(10, 300), 0.000012345, 0.00012345, 123456789.0, 12345678.0, 1234567.0, 123456.0, 12345.0, 1234.0};
@@ -41,12 +39,18 @@ int main() {
 
     printf("%05d\n", 50);
     printf("%5d\n", 50);
+}
+
+using namespace std;
+int main() {
+
     //pass_to_snprintf(buf, 255, "presdfadfascision:%d, formatSize:%d\n", precision, formatSize);
     //printf("%s", buf);
     //printf("%ld\n", sizeof __FILE__);
     //getFile(__FILE__);
 
-    TestClass& t = Singleton<TestClass>::instance();
+    //TestClass& t = Singleton<TestClass>::instance();
+
 
     return 0;
 }

@@ -1,5 +1,5 @@
 #include <functional>
-
+#include <string>
 using namespace std;
 class Test{
 public:
@@ -19,4 +19,8 @@ int main(){
     }
     {
     }
+
+    string name = "1234";
+    char buf[name.size()];
+    printf("%ld\n", sizeof(buf));
 }

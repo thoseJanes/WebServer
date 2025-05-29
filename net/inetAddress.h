@@ -60,7 +60,7 @@ public:
         addr_.sin_family = AF_INET;
     }
 
-    string toString(){
+    string toString() const {
         char buf[64];
         if(addr_.sin_family == AF_INET){
             inet_ntop(addr_.sin_family, &addr_.sin_addr, buf, sizeof(buf));

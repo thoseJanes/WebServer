@@ -57,6 +57,26 @@ public:
         }
     }
 
+    ssize_t send(const char* data, size_t len){
+        return ::send(fd_, data, len, NULL);
+    }
+    ssize_t write(const char* data, size_t len){
+        return ::write(fd_, data, len);
+    }
+
+    InetAddress getPeerAddr() const {
+        InetAddress addr;
+        memset(&addr, 0, sizeof(addr));
+        sockets::getPeerAddr(fd_, addr.getAddr());
+        return addr;
+    }
+
+    InetAddress getHostAddr() const {
+        InetAddress addr;
+        memset(&addr, 0, sizeof(addr));
+        sockets::getHostAddr(fd_, addr.getAddr());
+        return addr;
+    }
 private:
     int fd_;
 };

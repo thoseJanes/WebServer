@@ -7,14 +7,14 @@
 
 namespace webserver{
 
+const char* strerror_tl(int err);
+
 namespace CurrentThread{
 
 extern __thread int t_tid;
 extern __thread char t_tidString[32];
 extern __thread int t_tidStringLen;
 extern __thread const char* t_threadName;
-
-const char* strerror_tl(int err);
 
 inline void cacheTid(){
     if(!t_tid){

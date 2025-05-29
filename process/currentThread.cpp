@@ -18,12 +18,14 @@ static_assert(std::is_same<pid_t, int>::value, "pid_t should be int");
 
 
 __thread char t_errBuf[512];
+
+
+}
+
 const char* strerror_tl(int err){
-    return strerror_r(err, t_errBuf, sizeof t_errBuf);
+    return strerror_r(err, CurrentThread::t_errBuf, sizeof CurrentThread::t_errBuf);
 }
 
-
-}
 
 
 

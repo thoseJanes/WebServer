@@ -1,15 +1,15 @@
 #ifndef WEBSERVER_NET_CONNECTOR_H
 #define WEBSERVER_NET_CONNECTOR_H
 
-#include "channel.h"
-#include "eventLoop.h"
+#include "../event/channel.h"
+#include "../event/eventLoop.h"
 #include "socket.h"
 
 namespace webserver{
 
-//有可能会在某一时间出现多个retry，但是没关系，至少不会发生致命错误。
+//即使多次调用start，有可能会在某一时间出现多个retry，但是没关系，至少不会发生致命错误。
 //注意实现方式，这是通过设置状态ConnState实现的。
-class Connector{
+class Connector: public enable_shared_from_this<Connector>{
 public:
     enum ConnState{
         sConnected,
@@ -29,7 +29,7 @@ public:
     ~Connector(){
         tryingConnect_ = false;
         if(channel_){
-            if(channel_->isWrittingEnabled()){
+            if(channel_->isWritingEnabled()){
                 channel_->disableAll();
                 channel_->remove();
             }
@@ -41,6 +41,7 @@ public:
 
     void stop(){
         tryingConnect_ = false;
+        state_ = sDisconnected;
     }
 
     void setNewConnectionCallback(function<void(int)> cb){
@@ -53,23 +54,26 @@ public:
         loop_->runInLoop(bind(&Connector::connectInLoop, this));
     }
 
-private:
-    void connectInLoop(){//有可能出现stop之后仍然发生了连接？除非保证start只执行一次，不执行直接扔掉。
-        //loop_->assertInPendingFunctors();//遗憾的是：如果在channel的回调中，runInLoop只会当地执行，不会放进pendingFunctors中，因此不能直接assertInPendingFunctors
-        //可以通过queueInLoop保证在pendingFunctors中运行。
-        if(channel_){
-            ::close(channel_->getFd());
-            channel_.reset();
-            //在这里还需要清除定时事件（如果有的话）。消除定时器也没用。可能已经在准备执行了。
-        }
+    //执行restart时有一系列前置条件：start已经被调用过、restart运行在loop线程中、目前已经完成连接的建立并调用了TcpConnection...
+    void restart(){
+        loop_->assertInLoopThread();
+        assert(state_ = sConnected);
+        tryingConnect_ = true;
+        tryIntervalMs_ = 500;
+        //当前fd已经交给TcpConnection管理了，TcpConnection析构时会关闭它.
+        connectInLoop();//loop_->runInLoop(bind(&Connector::connectInLoop, this));
+        
+    }
 
+private:
+    void connectInLoop(){
+        loop_->assertInLoopThread();
         int fd = sockets::createNonblockingSocket();
         int ret = ::connect(fd, (sockaddr*)addr_.getAddr(), sizeof(addr_));
 
         if(ret == 0){//立即可连接。
-            channel_->disableAll();
-            channel_->remove();//在connectInLoop中reset
             state_ = sConnected;
+            tryingConnect_ = false;
             newConnectionCallback_(fd);
             tryIntervalMs_ = 500;
         }else{//连接无法立即建立。
@@ -80,7 +84,7 @@ private:
                     channel_.reset(new Channel(fd, loop_));
                     channel_->setWritableCallback(bind(&Connector::handleWrite, this));
                     channel_->setErrorCallback(bind(&Connector::handleError, this));
-                    channel_->enableWritting();//如果不放在loop中，可能丢失事件。
+                    channel_->enableWriting();//如果不放在loop中，可能丢失事件。
                     break;
             }
         }
@@ -95,7 +99,9 @@ private:
         if(sockets::getSocketError(channel_->getFd())!=0 || sockets::isSelfConnect(channel_->getFd())){
             retryInLoop();//继续尝试连接。
         }else{
+            //成功建立连接，可能需要resetChannel，fd交给TcpConnection管理。（其实不resetChannel也没关系，可以等待析构时关闭或者restart时自动关闭）
             state_ = sConnected;
+            tryingConnect_ = false;
             newConnectionCallback_(channel_->getFd());
             tryIntervalMs_ = 500;
         }
@@ -114,15 +120,23 @@ private:
         state_ = sDisconnected;
         TimeStamp tryStamp = TimeStamp::now();
         tryStamp.add(tryIntervalMs_*1000);
-        retryTimerId_ = loop_->runAt(tryStamp, bind(&Connector::tryConnectInLoop, this));
+        retryTimerId_ = loop_->runAt(tryStamp, bind(&Connector::tryConnectInLoop, shared_from_this()));//这个在下一次channel才会触发。
+        loop_->queueInLoop(bind(&Connector::resetChannelAndCloseFd, this));//这个在接下来的pendingFunctor就会触发。
         tryIntervalMs_ *= 2;
     }
 
+    void resetChannelAndCloseFd(){
+        loop_->assertInPendingFunctors();
+        ::close(channel_->getFd());
+        channel_.reset();
+    }
+
     void tryConnectInLoop(){
+        loop_->assertInChannelHandling();
         if(!tryingConnect_ || state_!=sDisconnected){
             return;
         }
-        loop_->runInLoop(bind(&Connector::connectInLoop, this));
+        connectInLoop();//loop_->runInLoop(bind(&Connector::connectInLoop, this));
     }
 
     EventLoop* loop_;

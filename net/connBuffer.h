@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <sys/uio.h>//readv、writev
 #include <string>
+#include "../logging/logger.h"
 namespace webserver{
     class ConnBuffer{
     public:
@@ -66,7 +67,7 @@ namespace webserver{
         //     //到多大？
         // }
 
-        void readFromFd(int fd){
+        ssize_t readFromFd(int fd){
             iovec vec[2];
             char buf[65535];
             size_t writable = writableBytes();
@@ -74,16 +75,20 @@ namespace webserver{
             vec[0].iov_len = writable;
             vec[1].iov_base = buf;
             vec[1].iov_len = sizeof buf;
-            size_t n = static_cast<size_t>(readv(fd, vec, 2));
-            
-            if(n <= writable){
-                hasWritten(n);
-            }else{
-                hasWritten(writable);
-                size_t over = n - writable;
-                makeWritingSpace(over);
-                append(buf, sizeof(buf) - over);
+            ssize_t ret = readv(fd, vec, 2);
+
+            if(ret>0){
+                size_t n = static_cast<size_t>(ret);
+                if(n <= writable){
+                    hasWritten(n);
+                }else{
+                    hasWritten(writable);
+                    size_t over = n - writable;
+                    makeWritingSpace(over);
+                    append(buf, sizeof(buf) - over);
+                }
             }
+            return ret;
         }
     private:
         static int kPrependSize_;

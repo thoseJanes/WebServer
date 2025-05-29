@@ -23,7 +23,7 @@ void* runInThread(void* threadData);
 
 class ThreadHandler{
 public:
-    ThreadHandler(function<void()> func, string name = "")
+    ThreadHandler(function<void()> func, string_view name = "")
     :func_(std::move(func)), name_(name), started_(false), joined_(false), handlerThreadTid_(CurrentThread::tid()){
         if(name.empty()){
             initName();

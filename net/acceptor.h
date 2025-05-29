@@ -1,9 +1,13 @@
 #ifndef WEBSERVER_NET_ACCEPTOR_H
 #define WEBSERVER_NET_ACCEPTOR_H
 #include "socket.h"
-#include "eventLoop.h"
+#include "../event/eventLoop.h"
 #include <unistd.h>
+
+
 namespace webserver{
+
+//用法:setNewConnectionCallback->listen->~
 class Acceptor{
 public:
     Acceptor(EventLoop* loop, InetAddress addr, bool reusePort = false):loop_(loop), socket_(Socket::nonblockingSocket()), channel_(new Channel(socket_.fd(), loop)){
@@ -27,12 +31,17 @@ public:
     }
     
     void listen(){
-        loop_->assertInPendingFunctors();
+        loop_->assertInLoopThread();
         listening_ = true;
         channel_->enableReading();
         socket_.listen();
     }
 
+
+    bool isListening(){
+        return listening_;
+    }
+private:
     void acceptableCallback(){
         loop_->assertInChannelHandling();
         assert(listening_);
@@ -55,10 +64,6 @@ public:
         }
     }
     
-    bool isListening(){
-        return listening_;
-    }
-private:
     Socket socket_;
     unique_ptr<Channel> channel_;
     EventLoop* loop_;

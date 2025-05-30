@@ -9,7 +9,7 @@ public:
     EventThreadPool(EventLoop* baseLoop, string_view name):next_(0), baseLoop_(baseLoop), name_(name){
     }
 
-    void start(int threadNum, function<void()> threadInitCallback){
+    void start(int threadNum, EventThread::ThreadInitCallback threadInitCallback){
         assert(threadNum >= 0);
         char buf[name_.size()+std::numeric_limits<int>::max_digits10+12];
         for(int i=0;i<threadNum;i++){
@@ -36,7 +36,11 @@ public:
         }
     }
 
-    ~EventThreadPool();
+    ~EventThreadPool(){
+        for(unique_ptr<EventThread>& eventThread:eventThreads_){
+            eventThread->join();
+        }
+    }
     
 private:
     //int threadNum_;

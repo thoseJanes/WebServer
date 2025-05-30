@@ -21,7 +21,7 @@ void sockets::getPeerAddr(int fd, UnionAddr* addr){
     socklen_t addrLen = sizeof(UnionAddr);
     
     if(getpeername(fd, (sockaddr*)addr, &addrLen)<0){
-        LOG_FATAL << "getPeerAddr failed";
+        LOG_SYSERROR << "getPeerAddr failed";
     }
 }
 
@@ -30,7 +30,7 @@ void sockets::getHostAddr(int fd, UnionAddr* addr){//是否要保证传入值必
     socklen_t addrLen = sizeof(UnionAddr);
     
     if(getsockname(fd, (sockaddr*)addr, &addrLen)<0){
-        LOG_FATAL << "getPeerAddr failed";
+        LOG_SYSERROR << "getPeerAddr failed";
     }
 }
 

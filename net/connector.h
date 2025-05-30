@@ -68,7 +68,7 @@ public:
 private:
     void connectInLoop(){
         loop_->assertInLoopThread();
-        int fd = sockets::createNonblockingSocket();
+        int fd = sockets::createNonblockingSocket(addr_.getFamily());
         int ret = ::connect(fd, (sockaddr*)addr_.getAddr(), sizeof(addr_));
 
         if(ret == 0){//立即可连接。

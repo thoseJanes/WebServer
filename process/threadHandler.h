@@ -73,10 +73,13 @@ public:
         snprintf(buf, sizeof buf, "Thread%d", counter.load());
         name_ = buf;
     }
-    void setName(string name){
+    void setName(string& name){
         assertInHandlerThread();
         assert(!started_);
-        name_ = std::move(name);
+        name_ = name;
+    }
+    string getName(){
+        return name_;
     }
     void setThreadFunc(function<void()> cb){
         assertInHandlerThread();

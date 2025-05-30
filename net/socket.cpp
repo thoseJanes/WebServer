@@ -12,10 +12,10 @@ namespace sockets{//不仅为了包装，也为了过滤一些错误。留下待
         return oldOption;
     }
 
-    int createNonblockingSocket(){
-        int fd = ::socket(PF_INET6, SOCK_STREAM, 0);
+    int createNonblockingSocket(sa_family_t family){
+        int fd = ::socket(family, SOCK_STREAM, 0);
         if(fd<0){
-            LOG_FATAL << "create socket failed";
+            LOG_SYSFATAL << "create socket failed";
         }
         enableFdOption(fd, O_NONBLOCK | O_CLOEXEC);
         return fd;
@@ -23,13 +23,13 @@ namespace sockets{//不仅为了包装，也为了过滤一些错误。留下待
 
     void bindOrDie(int fd, UnionAddr* addr){
         if(::bind(fd, (sockaddr*)addr, sizeof(UnionAddr)) < 0){
-            LOG_FATAL << "bind failed";
+            LOG_SYSFATAL << "bind failed";
         }
     }
 
     void listenOrDie(int fd, int max){
         if(::listen(fd, max)<0){
-            LOG_FATAL << "listen failed";
+            LOG_SYSFATAL << "listen failed";
         }
     }
 
@@ -47,7 +47,7 @@ namespace sockets{//不仅为了包装，也为了过滤一些错误。留下待
 
     void shutDownWrite(int fd){
         if(::shutdown(fd, SHUT_WR) < 0){
-            LOG_ERR << "failed in shutDownWrite().";
+            LOG_SYSERROR << "failed in shutDownWrite().";
         }
     }
 

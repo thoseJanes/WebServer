@@ -68,14 +68,14 @@ void TcpConnection::sendInLoop(const char* data, size_t len){
     loop_->assertInLoopThread();
     size_t remain = len;
     if(!channel_->isWritingEnabled() && !state_.isWriting){
-        ssize_t sent = socket_.send(data, len);
+        ssize_t sent = socket_.write(data, len);
         if(sent >= 0){
             remain -= static_cast<size_t>(sent);
             if(remain == 0 && writeCompleteCallback_){
                 writeCompleteCallback_(shared_from_this());
             }
         }else{
-            LOG_ERR << "Failed in TcpConnection::sendInLoop.";
+            LOG_SYSERROR << "Failed in TcpConnection::sendInLoop.";
             handleError();
         }
     }
@@ -120,8 +120,9 @@ void TcpConnection::handleWrite(){
     loop_->assertInChannelHandling();
     auto remain = outputBuffer_.readableBytes();
     if(remain > 0 && !shutdown){
-        ssize_t n = ::send(channel_->getFd(), outputBuffer_.readerBegin(), outputBuffer_.readableBytes(), NULL);
+        ssize_t n = socket_.write(outputBuffer_.readerBegin(), outputBuffer_.readableBytes());
         if(n >= 0){
+            outputBuffer_.retrieve(n);
             remain -= static_cast<size_t>(n);
             if(remain == 0){
                 channel_->disableWriting();
@@ -131,7 +132,7 @@ void TcpConnection::handleWrite(){
                 }
             }
         }else{
-            LOG_ERR << "Failed in TcpConnection::handleWrite()." ;
+            LOG_SYSERROR << "Failed in TcpConnection::handleWrite()." ;
             handleError();
         }
     }
@@ -140,7 +141,7 @@ void TcpConnection::handleRead(){
     loop_->assertInChannelHandling();
     int ret = inputBuffer_.readFromFd(channel_->getFd());
     if(ret < 0){
-        LOG_ERR << "Failed in TcpConnection::handleRead() when calling readFromFd().";
+        LOG_SYSERROR << "Failed in TcpConnection::handleRead() when calling readFromFd().";
         handleError();
     }else if(ret == 0){//表示对端已经关闭了连接。
         handleClose();
@@ -153,7 +154,7 @@ void TcpConnection::handleRead(){
 }
 void TcpConnection::handleError(){
     int err = sockets::getSocketError(socket_.fd());
-    LOG_ERR << "Error(" << errno << ") from errno:" << strerror_tl(errno) <<
+    LOG_ERROR << "Error(" << errno << ") from errno:" << strerror_tl(errno) <<
             ". Error(" << err << ") from socket:" << strerror_tl(err);
 }
 void TcpConnection::handleClose(){
@@ -168,9 +169,7 @@ void TcpConnection::forceClose(){
 }
 void TcpConnection::closeInLoop(){//如果close最后执行了，这个函数在loop中一定是tcpConnection最后执行的?
     loop_->assertInPendingFunctors();
-    if(state_.connState == sConnected || state_.connState == sConnecting){
-        state_.setConnectionState(sDisConnecting);
-    }
+
     channel_->disableAll();
     channel_->remove();
 

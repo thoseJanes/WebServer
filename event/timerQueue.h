@@ -8,34 +8,11 @@
 namespace webserver{
 
 namespace detail{
-int createTimerFd(){
-    int fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK | TFD_TIMER_ABSTIME);
-    if(fd < 0){
-        LOG_FATAL << "failed in createTimerFd";
-    }
-}
+int createTimerFd();
 
-int readTimerFd(int fd){
-    int64_t ovt;
-    int n = ::read(fd, &ovt, sizeof(ovt));
-    if(n != 8){
-        LOG_ERR << "expect 8 bytes but read " << n << " bytes in readTimerFd()!";
-    }
-}
+void readTimerFd(int fd);
 
-int setTimerFd(int fd, TimeStamp timeStamp){//setTimerfd时，是否需要取消之前设置的timerfd？
-    auto microSeconds = timeStamp.getMicroSecondsSinceEpoch() - TimeStamp::now().getMicroSecondsSinceEpoch();
-    if(microSeconds < 0){
-        LOG_WARN << "microSeconds "<< microSeconds <<" is negative in setTimerFd()!";
-    }
-    itimerspec t; memset(&t, 0, sizeof(t));
-    t.it_value.tv_sec = microSeconds/TimeStamp::kMicroSecondsPerSecond;
-    t.it_value.tv_nsec = (microSeconds%TimeStamp::kMicroSecondsPerSecond)/100*100 * 1000;//微秒到纳秒的转换。以及分辨率0.1毫秒。
-    
-    if(timerfd_settime(fd, NULL, &t, NULL)){
-        LOG_FATAL << "failed in timerfd_settime().";
-    }
-}
+void setTimerFd(int fd, TimeStamp timeStamp);
 
 }
 
@@ -68,11 +45,14 @@ public:
     void insertTimer(Timer* timer){
         assert(timedTimers_.size() == numberedTimers_.size());
         assert(timedTimers_.find({timer->getTimeStamp(), timer})==timedTimers_.end());
+        LOG_TRACE << "insert timer " << timer->getTimerId();
         timedTimers_.insert({timer->getTimeStamp(), timer});
         numberedTimers_.insert({timer->getTimerId(), timer});//集合会自动去重，即是重复插入也不需要担心。（resetTimers中可能重复插入）
 
         bool earliestChanged = (timedTimers_.begin()->second == timer);
         if(earliestChanged){
+            LOG_TRACE << "in inserting timer "<<timer->getTimerId() << " earliestChanged to " <<timer->getTimerId();
+            LOG_TRACE << "new timefd set at "<< timer->getTimeStamp().toFormattedString(true);
             resetTimerFd(timer);
         }
     }
@@ -84,7 +64,7 @@ public:
         channel_->assertInLoopThread();//可能在channel中，也可能在pendingFunctors。其实可以全部放进pendingFunctors中？但是这样，如果在执行channel时删除定时器，那么删除操作会被推迟。
         auto nTimerIt = numberedTimers_.lower_bound({timerId, reinterpret_cast<Timer*>(0)});
         if(nTimerIt==numberedTimers_.end() || nTimerIt->first != timerId){//在numberedTimers中寻找，如果没有找到，则一定是已经执行完了。
-            LOG_ERR << "Failed in cancelTimer(). Can't find timer " << timerId << ".";
+            LOG_ERROR << "Failed in cancelTimer(). Can't find timer " << timerId << ".";
             return false;
         }else{//找到了，可能刚开始执行，或者还没执行。
             if(handlingTimerCallback_){
@@ -113,7 +93,7 @@ private:
 
 
 
-    int timerFdReadCallBack(){
+    void timerFdReadCallBack(){
         handlingTimerCallback_ = true;
         auto expiredTimers = getExpiredTimers();
         for(Timer* timer:expiredTimers){

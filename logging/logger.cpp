@@ -24,6 +24,7 @@ void defaultLoggerFlushFunc(){
 }
 
 Logger::LogLevel initLogLevel(){
+    // return Logger::Trace;
     if(getenv("WEBSERVER_LOG_TRACE")){
         return Logger::Trace;
     }else if(getenv("WEBSERVER_LOG_DEBUG")){
@@ -45,6 +46,16 @@ Logger::Logger(Logger::SourceFile sourceFile, int line, Logger::LogLevel level):
     stream_ << TimeStamp::now().toFormattedString(true) << " " 
             << string_view(CurrentThread::tidString(), CurrentThread::tidStringLen())
             << string_view(detail::LogLevel2String[level].c_str(), 7);
+}
+
+Logger::Logger(Logger::SourceFile sourceFile, int line, bool toAbort):
+        outputFunc_(Global::logOutputFunc), flushFunc_(Global::logFlushFunc),
+        level_(toAbort?Fatal:Error), source_(sourceFile), line_(line){
+
+    stream_ << TimeStamp::now().toFormattedString(true) << " " 
+            << string_view(CurrentThread::tidString(), CurrentThread::tidStringLen())
+            << string_view(detail::LogLevel2String[level_].c_str(), 7)
+            << strerror_tl(errno) << " (errno=" << errno << ") ";
 }
 
 Logger::~Logger(){

@@ -14,7 +14,7 @@
 namespace webserver{
 
 namespace sockets{
-int createNonblockingSocket();
+int createNonblockingSocket(sa_family_t family);
 int connect(int fd, UnionAddr* addr);
 int getSocketError(int fd);
 }
@@ -31,7 +31,7 @@ public:
     //int connect(InetAddress addr){return detail::connect(fd_, addr.getAddr());}
     void shutDownWrite();
 
-    static Socket nonblockingSocket(){return Socket(sockets::createNonblockingSocket());}
+    static Socket nonblockingSocket(sa_family_t family){return Socket(sockets::createNonblockingSocket(family));}
     void setTcpNoDelay(bool val){
         int optVal = val;
         if(setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &optVal, sizeof(optVal))){
@@ -57,9 +57,9 @@ public:
         }
     }
 
-    ssize_t send(const char* data, size_t len){
-        return ::send(fd_, data, len, NULL);
-    }
+    // ssize_t send(const char* data, size_t len){
+    //     return ::send(fd_, data, len, NULL);
+    // }
     ssize_t write(const char* data, size_t len){
         return ::write(fd_, data, len);
     }

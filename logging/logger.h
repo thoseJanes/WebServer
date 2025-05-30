@@ -51,6 +51,7 @@ public:
         Fatal
     };
     Logger(SourceFile sourceFile, int line, LogLevel level);
+    Logger(SourceFile sourceFile, int line, bool toAbort);
     Logger(SourceFile sourceFile, int line, LogLevel level, OutputFunc outputFunc, FlushFunc flushFunc);
     
     ~Logger();
@@ -101,11 +102,15 @@ namespace Global{
 
 #define LOG_WARN \
     webserver::Logger(__FILE__, __LINE__, webserver::Logger::Warn).stream()
-#define LOG_ERR \
+#define LOG_ERROR \
     webserver::Logger(__FILE__, __LINE__, webserver::Logger::Error).stream()
 #define LOG_FATAL \
     webserver::Logger(__FILE__, __LINE__, webserver::Logger::Fatal).stream()
 
+#define LOG_SYSERROR \
+    webserver::Logger(__FILE__, __LINE__, false).stream()
+#define LOG_SYSFATAL \
+    webserver::Logger(__FILE__, __LINE__, true).stream()
 
 
 #endif

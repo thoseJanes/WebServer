@@ -30,6 +30,14 @@ namespace webserver{
             readerIndex_ = kPrependSize_;
             writerIndex_ = readerIndex_;
         }
+        void retrieve(size_t n){
+            if(n < readableBytes()){
+                readerIndex_ += n;
+            }else{
+                retrieveAll();
+            }
+            
+        }
         std::string retrieveAllAsString(){
             char* start = readerBegin();
             size_t len = readableBytes();

@@ -43,7 +43,9 @@ std::vector<Channel*> EpollPoller::poll(){
 
 void EpollPoller::updateChannel(Channel* channel){
     if(channel->getPollState() == Channel::sNone || channel->getPollState() == Channel::sDeleted){
-        LOG_ERR << "Conflict fd in channelsMap.";
+        if(channelsMap_.find(channel->getFd()) != channelsMap_.end()){
+            LOG_ERROR << "Conflict fd in channelsMap.";
+        }
         channelsMap_.insert({channel->getFd(), channel});
         channel->setPollState(Channel::sDisabled);
     }

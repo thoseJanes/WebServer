@@ -15,8 +15,12 @@ void Channel::remove(){
     loop_->removeChannel(this);
     assert(!loop_->hasChannel(this));
 }
-
-
 void Channel::assertInLoopThread(){
     loop_->assertInLoopThread();
+}
+
+Channel::~Channel(){
+    assert(state_ == sNone || state_ == sDeleted);//为什么不在析构函数中将channelremove出poller？
+    //assert(loop_->hasChannel(this) == false);
+    assert(!handlingEvents_);
 }

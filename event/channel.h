@@ -4,9 +4,13 @@
 #include <poll.h>
 #include <assert.h>
 #include <any>
+#include <functional>
+#include <memory>
 #include "../logging/logger.h"
+
 namespace webserver{
 
+using namespace std;
 class EventLoop;
 class Channel{
 public:
@@ -17,17 +21,15 @@ public:
         sDeleted,
     };
     Channel(int fd, EventLoop* loop)
-    :fd_(fd), loop_(loop), state_(sNone), event_(kNoneEvent), revent_(kNoneEvent), tied_(false){}
-    ~Channel(){
-        assert(state_ == sNone || state_ == sDeleted);//为什么不在析构函数中将channelremove出poller？
-    }
+    :fd_(fd), loop_(loop), state_(sNone), event_(kNoneEvent), revent_(kNoneEvent), tied_(false), handlingEvents_(false){}
+    ~Channel();
     void update();
     void remove();
 
-    void setReadableCallback(function<void()> func){readableCallback_ = func;}
-    void setWritableCallback(function<void()> func){writableCallback_ = func;}
-    void setErrorCallback(function<void()> func){errorCallback_ = func;}
-    void setCloseCallback(function<void()> func){closeCallback_ = func;}
+    void setReadableCallback(const function<void()> func){readableCallback_ = std::move(func);}
+    void setWritableCallback(const function<void()> func){writableCallback_ = std::move(func);}
+    void setErrorCallback(const function<void()> func){errorCallback_ = std::move(func);}
+    void setCloseCallback(const function<void()> func){closeCallback_ = std::move(func);}
     void enableReading(){event_ |= kReadingEvent; update();}
     void enableWriting(){event_ |= kWritingEvent; update();}
     void disableReading(){event_ &= ~kReadingEvent; update();}
@@ -42,23 +44,42 @@ public:
             if(tieGuard){
                 run();
             }else{
-                LOG_ERR << "Failed in handleEvent.";
+                LOG_SYSERROR << "Failed in handleEvent.";
             }
         }else{
             run();
         }
     }
     void run(){
+        handlingEvents_ = true;
+        if(tied_){
+            shared_ptr<std::any> guard = tie_.lock();
+            runWithGuard();
+        }else{
+            runWithGuard();
+        }
+        handlingEvents_ = false;
+    }
+    void runWithGuard(){
         if(revent_&POLLHUP && !(revent_&POLLIN)){
             closeCallback_();
         }
 
-        if(revent_ & (POLLIN|POLLPRI)){
-            readableCallback_();
-        }else if(revent_ & (POLLOUT)){
-            writableCallback_();
-        }else if(revent_ & (POLLERR|POLLNVAL)){
-            errorCallback_();
+        // if(revent_ & (POLLIN|POLLPRI)){
+        //     readableCallback_();
+        // }else if(revent_ & (POLLOUT)){
+        //     writableCallback_();
+        // }else if(revent_ & (POLLERR|POLLNVAL)){
+        //     errorCallback_();
+        // }
+        if(revent_ & (POLLERR|POLLNVAL)){
+            if(errorCallback_) errorCallback_();
+        }
+        if(event_ & (POLLIN | POLLPRI | POLLRDHUP)){
+            if(readableCallback_) readableCallback_();
+        }
+        if(event_ & (POLLOUT)){
+            if(writableCallback_) writableCallback_();
         }
     }
 
@@ -75,12 +96,12 @@ public:
         revent_ = revent;
     }
 
-    void tie(weak_ptr<std::any> t){
-        tie_ = t.lock();
+    void tie(const shared_ptr<std::any>& t){
+        tie_ = t;
         tied_ = true;
     }
     void untie(){
-        tie_ = NULL;
+        tie_.reset();
         tied_ = false;
     }
 private:
@@ -97,7 +118,8 @@ private:
     Callback errorCallback_;
 
     PollState state_;
-    std::any tie_;
+    bool handlingEvents_;
+    weak_ptr<std::any> tie_;
     bool tied_;
 
     static int kReadingEvent;

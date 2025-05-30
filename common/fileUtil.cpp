@@ -53,7 +53,7 @@ void FileAppender::append(const char* buf, const size_t len){
     while(written < len){
         auto err = ferror(file_);
         if(err){
-            fprintf(stderr, "FileAppender::append() failed: %s\n", CurrentThread::strerror_tl(err));
+            fprintf(stderr, "FileAppender::append() failed: %s\n", strerror_tl(err));
             break;
         }
 

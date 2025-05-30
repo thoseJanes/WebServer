@@ -17,7 +17,7 @@ public:
     }
 
     ~TcpClient(){
-        loop_->runInLoop(bind(&TcpClient::stopInLoop, this));
+        loop_->runInLoop(bind(&TcpClient::stopInLoop, this));//有问题！都析构了还能执行么。
     }
 
     void stopInLoop(){
@@ -76,7 +76,7 @@ private:
         if(writeCompleteCallback_){
             connection_->setWriteCompleteCallback(writeCompleteCallback_);
         }
-        connection_->setCloseCallback(bind(&TcpClient::connectionClosed, this));
+        connection_->setCloseCallback(bind(&TcpClient::connectionClosed, this));//注意，在析构时会先析构自己，再析构成员。
     }
 
     void connectionClosed(){

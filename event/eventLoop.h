@@ -18,7 +18,7 @@ namespace webserver{
 class Poller;
 class EventLoop{
 public:
-    EventLoop::EventLoop()
+    EventLoop()
     :   wakeupFd_(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)), 
         wakeupChannel_(new Channel(wakeupFd_, this)),
         handlingChannels_(false), 
@@ -48,8 +48,8 @@ public:
         assertInLoopThread();
         running_ = true;
         while(running_){
-            handlingChannels_ = true;//暂时没用。
             std::vector<Channel*> channels = std::move(poller_->poll());
+            handlingChannels_ = true;//暂时没用。
             for(auto channel:channels){
                 assert(channel->hasEvent());
                 channel->run();
@@ -80,16 +80,15 @@ public:
             queueInLoop(std::move(func));
         }
     }
-
     void queueInLoop(function<void()> func){
         MutexLockGuard lock(mutex_);
         pendingFuncs_.push_back(func);
         if(!handlingChannels_){
+            LOG_TRACE << "eventLoop in thread " << threadTid_ << " on waking up";
             wakeup();
         }
         
     }
-
     int getSizeOfPendingFunctions(){
         int size;
         {
@@ -101,12 +100,12 @@ public:
 
 
     void updateChannel(Channel* channel){
-        runInLoop(bind(&Poller::updateChannel, poller_, channel));
+        runInLoop(bind(&Poller::updateChannel, poller_.get(), channel));
         //assertInLoopThread();
         //poller_->updateChannel(channel);
     }
     void removeChannel(Channel* channel){
-        runInLoop(bind(&Poller::removeChannel, poller_, channel));
+        runInLoop(bind(&Poller::removeChannel, poller_.get(), channel));
         // assertInLoopThread();
         // //assert()是否应该允许在handlingChannels_时从poller删除channel？
         // poller_->removeChannel(channel);
@@ -122,6 +121,17 @@ public:
         runInLoop(bind(&TimerQueue::insertTimer, timerQueue_.get(), timer));
         return TimerId(timer->getTimerId());
     }
+    TimerId runAfter(int msecond, function<void()> callback){
+        TimeStamp start = TimeStamp::now();
+        TimeStamp now = start;
+        start.add(msecond*1000);
+        
+        assert(start.getMicroSecondsSinceEpoch() - now.getMicroSecondsSinceEpoch() == msecond*1000);
+        Timer* timer = new Timer(start, callback);
+        LOG_TRACE << "timer "<< timer->getTimerId() <<" msecond*1000:" << start.getMicroSecondsSinceEpoch() - now.getMicroSecondsSinceEpoch();
+        runInLoop(bind(&TimerQueue::insertTimer, timerQueue_.get(), timer));
+        return TimerId(timer->getTimerId());
+    }
     TimerId runEvery(TimeStamp start, function<void()> callback, double intervalSeconds){
         //assertInLoopThread();
         Timer* timer = new Timer(start, callback, intervalSeconds);
@@ -134,7 +144,7 @@ public:
     }
 
 
-    void assertInLoopThread(){
+    void assertInLoopThread(){//需要打印调用堆栈。需要用宏定义打印__FILE__和__LINE__吗？
         assert(isInLoopThread());
     }
     void assertInChannelHandling(){
@@ -154,10 +164,14 @@ public:
         //即使是在自己线程，也需要wakeup。不过由于readWakeupFd也是在自己线程，所以，可能刚wakeup，然后就被readWakeupFd读取走了？
         //但是这也没关系，因为wakeup就是为了唤醒epoll_wait而存在的。
         int64_t buf = 1;
-        int n = write(wakeupFd_, &buf, sizeof(buf));
+        int n = ::write(wakeupFd_, &buf, sizeof(buf));
         if(n != 8){
-            LOG_ERR << "Expect 8 bytes but write " << n << " bytes in EventLoop::wakeup().";
+            LOG_SYSERROR << "Expect 8 bytes but write " << n << " bytes in EventLoop::wakeup().";
         }
+    }
+
+    int getThreadId(){
+        return CurrentThread::tid();
     }
 private:
     void runPendingFunctions(){//是否需要状态相关的判断？
@@ -175,27 +189,29 @@ private:
 
     void wakeupCallback(){
         //assertInLoopThread();这个assert会在channel中保证，这里不需要担心它。
+        LOG_TRACE << "eventLoop in thread " << threadTid_ << " responses waking up";
         int64_t buf;
         int n = read(wakeupFd_, &buf, sizeof(buf));
         if(n != 8){
-            LOG_ERR << "Expect 8 bytes but read " << n << " bytes in EventLoop::readWakeupFd().";
+            LOG_SYSERROR << "Expect 8 bytes but read " << n << " bytes in EventLoop::readWakeupFd().";
         }
     }
 
-    std::vector<function<void()>> pendingFuncs_;
+
+    static __thread EventLoop* t_eventLoop_;
+    pid_t threadTid_;
+
     bool running_;
+    bool handlingChannels_;
+    bool handlingPendingFuncs_;
 
     unique_ptr<Poller> poller_;//先有poller，才能够更新timer的channel
     unique_ptr<TimerQueue> timerQueue_;
     MutexLock mutex_;//用于保护timerQueue_
+    std::vector<function<void()>> pendingFuncs_;
     
-    static __thread EventLoop* t_eventLoop_;
     int wakeupFd_;
     unique_ptr<Channel> wakeupChannel_;
-    pid_t threadTid_;
-
-    bool handlingChannels_;
-    bool handlingPendingFuncs_;
 };
 
 

@@ -20,7 +20,7 @@ int getSocketError(int fd);
 }
 
 
-class Socket{
+class Socket:Noncopyable{
 public:
     explicit Socket(int fd):fd_(fd){}
     ~Socket(){::close(fd_);}

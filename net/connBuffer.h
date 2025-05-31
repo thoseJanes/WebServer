@@ -14,14 +14,19 @@ namespace webserver{
         }
         ~ConnBuffer();
 
-        
-
-        char* begin(){return buf_.data();}
-        char* readerBegin(){return buf_.data()+readerIndex_;}
-        char* writerBegin(){return buf_.data()+writerIndex_;}
+        const char* begin(){return buf_.data();}
+        const char* readerBegin(){return buf_.data()+readerIndex_;}
+        const char* writerBegin(){return buf_.data()+writerIndex_;}
         size_t readableBytes(){return writerIndex_ - readerIndex_;}
         size_t writableBytes(){return buf_.size() - writerIndex_;}
         size_t prependableBytes(){return readerIndex_;}
+
+        const char* findCRLF(const char* start){
+            assert(start < writerBegin());
+            assert(start >= readerBegin());
+            const char* pos = std::search(start, writerBegin(), kCRLF, kCRLF+2);
+            return pos==writerBegin()?NULL:pos;
+        }
 
         void hasWritten(size_t len){
             writerIndex_ += len;
@@ -38,6 +43,12 @@ namespace webserver{
             }
             
         }
+        void retrieveTo(const char* pos){
+            assert(pos >= readerBegin());
+            assert(pos <= writerBegin());
+            size_t offset = pos - readerBegin();
+            retrieve(offset);
+        }
         std::string retrieveAllAsString(){
             char* start = readerBegin();
             size_t len = readableBytes();
@@ -46,9 +57,10 @@ namespace webserver{
         }
         
         void prepend(char* data, size_t len){
-            assert(readableBytes() >= len);
-            std::copy(writerBegin()-len, writerBegin(), data);
-            writerIndex_ -= len;
+            assert(prependableBytes() >= len);
+            readerIndex_ -= len;
+            std::copy(data, data+len, readerIndex_);
+            
         }
 
         void append(const char* data, size_t len){
@@ -104,6 +116,7 @@ namespace webserver{
         int readerIndex_;
         int writerIndex_;
         std::vector<char> buf_;
+        static const char kCRLF[3];
 
     };
 }

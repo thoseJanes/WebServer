@@ -67,7 +67,7 @@ public:
 
     void setTcpNoDelay(bool bl);
 
-    void send(const char* buf, size_t len);
+    void send(const void* buf, size_t len);
     void send(string_view str);
     void send(ConnBuffer* buffer);
 
@@ -94,8 +94,18 @@ public:
         return name_;
     }
     
+    bool isConnected() const {
+        return state_.connState == sConnected;
+    }
+
+    void setContext(std::any context) const {
+        context_ = context;
+    }
+    std::any getContext() const {
+        return context_;
+    }
 private:
-    void shutdownInLoop();
+    void shutdownWriteInLoop();
 
     void handleWrite();
     void handleRead();
@@ -105,8 +115,8 @@ private:
     void startReadInLoop();
     void stopInReadLoop();
 
-    void sendInLoop(string str);
-    void sendInLoop(const char* data, size_t len);
+    void sendInLoop(string& str);
+    void sendInLoop(const void* data, size_t len);
     State state_;
     EventLoop* loop_;
     unique_ptr<Channel> channel_;
@@ -124,6 +134,8 @@ private:
 
     size_t highWaterBytes_;
     string name_;
+
+    mutable std::any context_;
     
 };
 

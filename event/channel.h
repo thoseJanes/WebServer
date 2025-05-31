@@ -53,7 +53,7 @@ public:
     void run(){
         handlingEvents_ = true;
         if(tied_){
-            shared_ptr<std::any> guard = tie_.lock();
+            shared_ptr<void> guard = tie_.lock();
             runWithGuard();
         }else{
             runWithGuard();
@@ -96,7 +96,7 @@ public:
         revent_ = revent;
     }
 
-    void tie(const shared_ptr<std::any>& t){
+    void tie(const shared_ptr<void> t){
         tie_ = t;
         tied_ = true;
     }
@@ -119,7 +119,7 @@ private:
 
     PollState state_;
     bool handlingEvents_;
-    weak_ptr<std::any> tie_;
+    weak_ptr<void>tie_;
     bool tied_;
 
     static int kReadingEvent;

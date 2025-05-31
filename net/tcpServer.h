@@ -14,7 +14,9 @@ public:
         name_(name),
         acceptor_(new Acceptor(loop_, addr, reusePort)),
         threadPool_(new EventThreadPool(baseLoop, name)),
-        connId_(0)
+        connId_(0),
+        messageCallback_(detail::defaultMessageCallback),
+        connectCallback_(detail::defaultConnectCallback)
     {
         acceptor_->setNewConnectionCallback(bind(&TcpServer::newConnection, this, placeholders::_1));
     }
@@ -28,11 +30,19 @@ public:
         highWaterCallback_ = cb;
         highWaterBytes_ = highWaterBytes;
     }
-    void setWriteCompleteCallback(size_t highWaterBytes, WriteCompleteCallback cb){
+    void setWriteCompleteCallback(WriteCompleteCallback cb){
         writeCompleteCallback_ = cb;
     }
+
+    void setMessageCallback(MessageCallback cb){
+        messageCallback_ = cb;
+    }
+
+    void setConnectCallback(ConnectCallback cb){
+        connectCallback_ = cb;
+    }
     
-    void start(int threadNum, function<void()> initThreadCallback){
+    void start(int threadNum, EventThread::ThreadInitCallback initThreadCallback){
         threadPool_->start(threadNum, initThreadCallback);//如果创建较多线程，貌似会在这里阻塞一会儿。是否需要放入loop运行？
         loop_->runInLoop(bind(&TcpServer::startInLoop, this));
     }
@@ -51,8 +61,8 @@ private:
         connections_.insert({string(buf, len-1), newConn});
         connId_++;
 
-        newConn->setMessageCallback(detail::defaultMessageCallback);
-        newConn->setConnectCallback(detail::defaultConnectCallback);
+        newConn->setMessageCallback(messageCallback_);
+        newConn->setConnectCallback(connectCallback_);
         newConn->setCloseCallback(bind(&TcpServer::removeConnection, this, placeholders::_1));
         if(highWaterCallback_){
             newConn->setHighWaterCallback(highWaterBytes_, highWaterCallback_);
@@ -78,6 +88,8 @@ private:
     size_t highWaterBytes_;
     HighWaterCallback highWaterCallback_;
     WriteCompleteCallback writeCompleteCallback_;
+    MessageCallback messageCallback_;
+    ConnectCallback connectCallback_;
 };
 
 }

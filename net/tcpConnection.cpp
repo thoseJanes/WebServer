@@ -21,13 +21,16 @@ TcpConnection::TcpConnection(int fd, string_view name, EventLoop* loop)
     hostAddr_(socket_.getHostAddr()),
     peerAddr_(socket_.getPeerAddr()),
     state_({sConnecting, false, false, false})
-    
 {
+    //channel在执行回调时，TcpConnection必须存在。
     channel_->setCloseCallback(bind(&TcpConnection::handleClose, this));
     channel_->setErrorCallback(bind(&TcpConnection::handleError, this));
     channel_->setReadableCallback(bind(&TcpConnection::handleRead, this));
     channel_->setWritableCallback(bind(&TcpConnection::handleWrite, this));
     socket_.setKeepAlive(true);
+
+    channel_->tie(shared_from_this());//注意，这里只有用void类型的指针才能共享控制块，见smartPtrTest
+    channel_->enableReading();
 
     state_.setConnectionState(sConnected);//应当在connected之前设置好回调函数？或者用锁保护回调函数？
     if(connectCallback_){
@@ -40,27 +43,28 @@ void TcpConnection::setTcpNoDelay(bool bl){
     socket_.setTcpNoDelay(bl);
 }
 
-void TcpConnection::send(const char* buf, size_t len){
-    send(string_view(buf, len));
+void TcpConnection::send(const void* data, size_t len){
+    send(string_view(static_cast<const char*>(data), len));
 }
 void TcpConnection::send(string_view str){
     if(loop_->isInLoopThread()){
         sendInLoop(str.data(), str.size());
     }else{
-        loop_->runInLoop(bind<void(TcpConnection::*)(string)>(&TcpConnection::sendInLoop, this, string(str)));
+        loop_->runInLoop(bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, string(str)));
     }
 }
 void TcpConnection::send(ConnBuffer* buffer){
     if(loop_->isInLoopThread()){
-        sendInLoop(buffer->retrieveAllAsString());
+        sendInLoop(buffer->readerBegin(), buffer->readableBytes());
+        buffer->retrieveAll();
     }else{
-        loop_->runInLoop(bind<void(TcpConnection::*)(string)>(&TcpConnection::sendInLoop, this, buffer->retrieveAllAsString()));
+        loop_->runInLoop(bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, buffer->retrieveAllAsString()));
     }
 }
-void TcpConnection::sendInLoop(string str){
+void TcpConnection::sendInLoop(string& str){
     sendInLoop(str.data(), str.size());
 }
-void TcpConnection::sendInLoop(const char* data, size_t len){
+void TcpConnection::sendInLoop(const void* data, size_t len){
     assert(state_.connState == sConnected);
     // if(state_.shutdown){
     //     return;
@@ -68,7 +72,7 @@ void TcpConnection::sendInLoop(const char* data, size_t len){
     loop_->assertInLoopThread();
     size_t remain = len;
     if(!channel_->isWritingEnabled() && !state_.isWriting){
-        ssize_t sent = socket_.write(data, len);
+        ssize_t sent = socket_.write(static_cast<const char*>(data), len);
         if(sent >= 0){
             remain -= static_cast<size_t>(sent);
             if(remain == 0 && writeCompleteCallback_){
@@ -82,7 +86,7 @@ void TcpConnection::sendInLoop(const char* data, size_t len){
     //什么情况下可以直接发送数据?
     if(remain > 0 && !state_.shutdown){
         auto size = outputBuffer_.readableBytes();
-        outputBuffer_.append(data + len - remain, remain);
+        outputBuffer_.append(static_cast<const char*>(data) + len - remain, remain);
         assert(outputBuffer_.readableBytes() == size + remain);
         if(size+remain >= highWaterBytes_ && size < highWaterBytes_ && highWaterCallback_){
             highWaterCallback_(shared_from_this(), size+remain);
@@ -102,7 +106,7 @@ void TcpConnection::startRead(){
 }
 void TcpConnection::startReadInLoop(){
     loop_->assertInLoopThread();
-    if(state_.connState == sConnected){
+    if(state_.isReading && !channel_->isReadingEnabled()){
         channel_->enableReading();
     }
 }
@@ -112,14 +116,19 @@ void TcpConnection::stopRead(){
 }
 void TcpConnection::stopInReadLoop(){
     loop_->assertInLoopThread();
-    channel_->disableReading();
+    if(!state_.isReading && channel_->isReadingEnabled()){
+        channel_->disableReading();
+    }
 }
 
 
 void TcpConnection::handleWrite(){
     loop_->assertInChannelHandling();
+    if(!channel_->isWritingEnabled()){//事件处理顺序：close->error->read->write，防止连接已经准备被read关闭
+        return;
+    }
     auto remain = outputBuffer_.readableBytes();
-    if(remain > 0 && !shutdown){
+    if(remain > 0){
         ssize_t n = socket_.write(outputBuffer_.readerBegin(), outputBuffer_.readableBytes());
         if(n >= 0){
             outputBuffer_.retrieve(n);
@@ -130,11 +139,18 @@ void TcpConnection::handleWrite(){
                 if(writeCompleteCallback_){
                     writeCompleteCallback_(shared_from_this());
                 }
+
+                if(state_.connState == sDisConnecting){
+                    shutdownWriteInLoop();
+                }
             }
+            
         }else{
             LOG_SYSERROR << "Failed in TcpConnection::handleWrite()." ;
             handleError();
         }
+    }else{
+        LOG_ERROR << "Handling write when output buffer remaining equals zero.";
     }
 }
 void TcpConnection::handleRead(){
@@ -183,9 +199,11 @@ void TcpConnection::closeInLoop(){//如果close最后执行了，这个函数在
 }
 
 void TcpConnection::shutdownWrite(){
-    state_.shutdown = true;
-    loop_->queueInLoop(bind(&TcpConnection::shutdownInLoop, this));
+    state_.setConnectionState(sDisConnecting);
+    if(!channel_->isWritingEnabled()){
+        loop_->queueInLoop(bind(&TcpConnection::shutdownWriteInLoop, this));
+    }
 }
-void TcpConnection::shutdownInLoop(){
+void TcpConnection::shutdownWriteInLoop(){
     socket_.shutDownWrite();
 }

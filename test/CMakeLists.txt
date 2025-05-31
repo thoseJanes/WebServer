@@ -19,5 +19,5 @@ target_link_libraries(processTest ${WEBSERVER_BASE_LIB})
 add_executable(threadTest threadTest.cpp)
 target_link_libraries(threadTest ${WEBSERVER_BASE_LIB})
 
-add_executable(testEventLoop testEventLoop.cpp)
-target_link_libraries(testEventLoop ${WEBSERVER_BASE_LIB})
+add_executable(eventLoopTest eventLoopTest.cpp)
+target_link_libraries(eventLoopTest ${WEBSERVER_BASE_LIB})

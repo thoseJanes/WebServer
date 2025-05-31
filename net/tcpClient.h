@@ -17,10 +17,6 @@ public:
     }
 
     ~TcpClient(){
-        loop_->runInLoop(bind(&TcpClient::stopInLoop, this));//有问题！都析构了还能执行么。
-    }
-
-    void stopInLoop(){
         loop_->assertInLoopThread();
         shared_ptr<TcpConnection> conn;
         bool unique;
@@ -31,9 +27,10 @@ public:
         }
         if(!conn){
             connector_->stop();
-            //loop_->queueInLoop(bind(&Connector::stop, connector_));retry时，connector自己会存活。不需要这里再帮忙。
+            //loop_->queueInLoop(bind(&Connector::stop, connector_));retry时，connector自己会存活。不需要这里再帮忙?
         }
         if(unique){
+            connection_->setCloseCallback(NULL);
             connection_->forceClose();
         }
     }
@@ -76,7 +73,9 @@ private:
         if(writeCompleteCallback_){
             connection_->setWriteCompleteCallback(writeCompleteCallback_);
         }
-        connection_->setCloseCallback(bind(&TcpClient::connectionClosed, this));//注意，在析构时会先析构自己，再析构成员。
+
+        //注意，在析构时会先析构自己，再析构成员。所以如果close在TcpClient析构之后会出错。需要先重置connectionClosed函数。
+        connection_->setCloseCallback(bind(&TcpClient::connectionClosed, this));
     }
 
     void connectionClosed(){

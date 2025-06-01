@@ -48,6 +48,14 @@ public:
         writeCompleteCallback_ = cb;
     }
 
+    void setMessageCallback(MessageCallback cb){
+        messageCallback_ = cb;
+    }
+
+    void setConnectCallback(ConnectCallback cb){
+        connectCallback_ = cb;
+    }
+
     shared_ptr<TcpConnection> getConnection(){
         MutexLockGuard lock(mutex_);
         return connection_;
@@ -95,6 +103,8 @@ private:
     size_t highWaterBytes_;
     HighWaterCallback highWaterCallback_;
     WriteCompleteCallback writeCompleteCallback_;
+    MessageCallback messageCallback_;
+    ConnectCallback connectCallback_;
     string name_;
 };
 

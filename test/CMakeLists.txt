@@ -2,7 +2,7 @@
 # target_link_libraries(logger_test )
 
 cmake_minimum_required(VERSION 3.10)
-project(MyApp)
+project(test)
 
 # 方式1：直接指定路径（推荐）
 find_library(WEBSERVER_BASE_LIB webserver_base PATHS /usr/local/lib)
@@ -21,3 +21,6 @@ target_link_libraries(threadTest ${WEBSERVER_BASE_LIB})
 
 add_executable(eventLoopTest eventLoopTest.cpp)
 target_link_libraries(eventLoopTest ${WEBSERVER_BASE_LIB})
+
+add_executable(tcpServerTest tcpServerTest.cpp)
+target_link_libraries(tcpServerTest ${WEBSERVER_BASE_LIB})

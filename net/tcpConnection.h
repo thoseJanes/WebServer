@@ -37,16 +37,16 @@ public:
     };
     struct State{
         ConnState connState;
-        bool isWriting;
         bool isReading;
-        bool shutdown;
-        size_t bytesToBeSent;
+        //size_t bytesToBeSent;
         void setConnectionState(ConnState state){
             connState = state;
         }
     };
 
     TcpConnection(int fd, string_view name, EventLoop* loop);
+    ~TcpConnection();
+    void connectEstablished();
 
     void setHighWaterCallback(size_t highWaterBytes, HighWaterCallback cb){
         highWaterBytes_ = highWaterBytes;
@@ -70,6 +70,7 @@ public:
     void send(const void* buf, size_t len);
     void send(string_view str);
     void send(ConnBuffer* buffer);
+    void sendDelay(string_view str, int delayMs);
 
     void startRead();
     void stopRead();
@@ -80,9 +81,7 @@ public:
 
     void shutdownWrite();
 
-    ~TcpConnection(){
-
-    }
+    
 
     string hostAddressString() const {
         return hostAddr_.toString();

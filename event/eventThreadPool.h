@@ -24,6 +24,9 @@ public:
         if(eventThreads_.empty()){
             return baseLoop_;
         }else{
+            if(next_ >= eventThreads_.size()){
+                next_ = 0;
+            }
             return eventThreads_[next_++]->getLoop();
         }
     }

@@ -24,7 +24,6 @@ void defaultLoggerFlushFunc(){
 }
 
 Logger::LogLevel initLogLevel(){
-    // return Logger::Trace;
     if(getenv("WEBSERVER_LOG_TRACE")){
         return Logger::Trace;
     }else if(getenv("WEBSERVER_LOG_DEBUG")){

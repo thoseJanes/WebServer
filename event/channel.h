@@ -38,18 +38,18 @@ public:
     bool isReadingEnabled(){return (event_ & kReadingEvent);}
     bool isWritingEnabled(){return (event_ & kWritingEvent);}
 
-    void handleEvent(){
-        if(tied_){
-            auto tieGuard = make_shared<std::any>(tie_);
-            if(tieGuard){
-                run();
-            }else{
-                LOG_SYSERROR << "Failed in handleEvent.";
-            }
-        }else{
-            run();
-        }
-    }
+    // void handleEvent(){
+    //     if(tied_){
+    //         auto tieGuard = tie_.lock();//make_shared<std::any>(tie_);
+    //         if(tieGuard){
+    //             run();
+    //         }else{
+    //             LOG_SYSERROR << "Failed in handleEvent.";
+    //         }
+    //     }else{
+    //         run();
+    //     }
+    // }
     void run(){
         handlingEvents_ = true;
         if(tied_){
@@ -62,7 +62,7 @@ public:
     }
     void runWithGuard(){
         if(revent_&POLLHUP && !(revent_&POLLIN)){
-            closeCallback_();
+            if(closeCallback_) closeCallback_();
         }
 
         // if(revent_ & (POLLIN|POLLPRI)){
@@ -73,9 +73,13 @@ public:
         //     errorCallback_();
         // }
         if(revent_ & (POLLERR|POLLNVAL)){
+            LOG_DEBUG << "channel error.";
             if(errorCallback_) errorCallback_();
         }
         if(event_ & (POLLIN | POLLPRI | POLLRDHUP)){
+            if(event_ & POLLRDHUP){
+                LOG_DEBUG << "POLLRDHUP triggered";
+            }
             if(readableCallback_) readableCallback_();
         }
         if(event_ & (POLLOUT)){

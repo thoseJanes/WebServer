@@ -5,12 +5,12 @@ using namespace webserver;
 
 
 void detail::defaultMessageCallback(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp timeStamp){
-    LOG_TRACE << "Receive message \"" << buffer->retrieveAllAsString() << "\" at time " << timeStamp.toFormattedString(false);
+    LOG_INFO << "Receive message \"" << buffer->retrieveAllAsString() << "\" at time " << timeStamp.toFormattedString(false);
     //buffer->retrieveAll();
 }
 
 void detail::defaultConnectCallback(const shared_ptr<TcpConnection>& conn){
-    LOG_TRACE << "Connection established between host "<< conn->hostAddressString() << ", peer " << conn->peerAddressString();
+    LOG_INFO << "Connection established between host "<< conn->hostAddressString() << ", peer " << conn->peerAddressString();
 }
 
 TcpConnection::TcpConnection(int fd, string_view name, EventLoop* loop)
@@ -20,15 +20,23 @@ TcpConnection::TcpConnection(int fd, string_view name, EventLoop* loop)
     name_(name),
     hostAddr_(socket_.getHostAddr()),
     peerAddr_(socket_.getPeerAddr()),
-    state_({sConnecting, false, false, false})
+    state_({sConnecting, false})
 {
+    
     //channel在执行回调时，TcpConnection必须存在。
     channel_->setCloseCallback(bind(&TcpConnection::handleClose, this));
     channel_->setErrorCallback(bind(&TcpConnection::handleError, this));
     channel_->setReadableCallback(bind(&TcpConnection::handleRead, this));
     channel_->setWritableCallback(bind(&TcpConnection::handleWrite, this));
     socket_.setKeepAlive(true);
+}
 
+TcpConnection::~TcpConnection(){
+    LOG_DEBUG << "connection " << name_ << " dtor()";
+}
+
+void TcpConnection::connectEstablished(){
+    assert(state_.connState == sConnecting);
     channel_->tie(shared_from_this());//注意，这里只有用void类型的指针才能共享控制块，见smartPtrTest
     channel_->enableReading();
 
@@ -37,7 +45,6 @@ TcpConnection::TcpConnection(int fd, string_view name, EventLoop* loop)
         connectCallback_(shared_from_this());
     }
 }
-
 
 void TcpConnection::setTcpNoDelay(bool bl){
     socket_.setTcpNoDelay(bl);
@@ -61,6 +68,9 @@ void TcpConnection::send(ConnBuffer* buffer){
         loop_->runInLoop(bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, buffer->retrieveAllAsString()));
     }
 }
+void TcpConnection::sendDelay(string_view str, int delayMs){
+    loop_->runAfter(delayMs, bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, string(str)));
+}
 void TcpConnection::sendInLoop(string& str){
     sendInLoop(str.data(), str.size());
 }
@@ -71,7 +81,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len){
     // }
     loop_->assertInLoopThread();
     size_t remain = len;
-    if(!channel_->isWritingEnabled() && !state_.isWriting){
+    if(!channel_->isWritingEnabled() && outputBuffer_.readableBytes() == 0){
         ssize_t sent = socket_.write(static_cast<const char*>(data), len);
         if(sent >= 0){
             remain -= static_cast<size_t>(sent);
@@ -84,7 +94,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len){
         }
     }
     //什么情况下可以直接发送数据?
-    if(remain > 0 && !state_.shutdown){
+    if(remain > 0){
         auto size = outputBuffer_.readableBytes();
         outputBuffer_.append(static_cast<const char*>(data) + len - remain, remain);
         assert(outputBuffer_.readableBytes() == size + remain);
@@ -94,7 +104,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len){
 
         if(!channel_->isWritingEnabled() && state_.connState == sConnected){
             channel_->enableWriting();
-            state_.isWriting = true;
+            //state_.isWriting = true;
         }
     }
 }
@@ -135,7 +145,6 @@ void TcpConnection::handleWrite(){
             remain -= static_cast<size_t>(n);
             if(remain == 0){
                 channel_->disableWriting();
-                state_.isWriting = false;
                 if(writeCompleteCallback_){
                     writeCompleteCallback_(shared_from_this());
                 }
@@ -155,11 +164,12 @@ void TcpConnection::handleWrite(){
 }
 void TcpConnection::handleRead(){
     loop_->assertInChannelHandling();
-    int ret = inputBuffer_.readFromFd(channel_->getFd());
+    ssize_t ret = inputBuffer_.readFromFd(channel_->getFd());
     if(ret < 0){
         LOG_SYSERROR << "Failed in TcpConnection::handleRead() when calling readFromFd().";
         handleError();
     }else if(ret == 0){//表示对端已经关闭了连接。
+        LOG_ERROR << "read zero from "<< name_;
         handleClose();
     }else{
         if(messageCallback_){
@@ -170,10 +180,12 @@ void TcpConnection::handleRead(){
 }
 void TcpConnection::handleError(){
     int err = sockets::getSocketError(socket_.fd());
-    LOG_ERROR << "Error(" << errno << ") from errno:" << strerror_tl(errno) <<
-            ". Error(" << err << ") from socket:" << strerror_tl(err);
+    LOG_ERROR << "Connection: " << name_ << ". Error(" << errno << ") from errno:" << strerror_tl(errno) <<
+            ". Error(" << err << ") from socket:" << strerror_tl(err)
+             ;//<< "\n" << "backTrace:" << CurrentThread::backTraceStacks(true);
 }
 void TcpConnection::handleClose(){
+    LOG_ERROR << "start handle close from "<< name_;
     state_.setConnectionState(sDisConnecting);
     loop_->queueInLoop(bind(&TcpConnection::closeInLoop, this));//能保证加在目前的最后面执行，且可以安全地操作channel。
 }
@@ -184,6 +196,7 @@ void TcpConnection::forceClose(){
     loop_->queueInLoop(bind(&TcpConnection::closeInLoop, shared_from_this()));//能保证加在目前的最后面执行，且可以安全地操作channel。
 }
 void TcpConnection::closeInLoop(){//如果close最后执行了，这个函数在loop中一定是tcpConnection最后执行的?
+    LOG_DEBUG << "closeInLoop from connection:" << name_;
     loop_->assertInPendingFunctors();
 
     channel_->disableAll();
@@ -199,6 +212,7 @@ void TcpConnection::closeInLoop(){//如果close最后执行了，这个函数在
 }
 
 void TcpConnection::shutdownWrite(){
+    LOG_DEBUG << "shutdown in connection "<<name_;
     state_.setConnectionState(sDisConnecting);
     if(!channel_->isWritingEnabled()){
         loop_->queueInLoop(bind(&TcpConnection::shutdownWriteInLoop, this));

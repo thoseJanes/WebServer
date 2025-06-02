@@ -12,11 +12,14 @@ namespace webserver{
             buf_.resize(kPrependSize_+kInitialSize_);
             
         }
-        ~ConnBuffer();
+        ~ConnBuffer(){}
 
-        const char* begin(){return buf_.data();}
-        const char* readerBegin(){return buf_.data()+readerIndex_;}
-        const char* writerBegin(){return buf_.data()+writerIndex_;}
+        char* begin(){return buf_.data();}
+        char* readerBegin(){return buf_.data()+readerIndex_;}
+        char* writerBegin(){return buf_.data()+writerIndex_;}
+        const char* begin() const {return buf_.data();}
+        const char* readerBegin() const {return buf_.data()+readerIndex_;}
+        const char* writerBegin() const {return buf_.data()+writerIndex_;}
         size_t readableBytes(){return writerIndex_ - readerIndex_;}
         size_t writableBytes(){return buf_.size() - writerIndex_;}
         size_t prependableBytes(){return readerIndex_;}
@@ -24,7 +27,8 @@ namespace webserver{
         const char* findCRLF(const char* start){
             assert(start < writerBegin());
             assert(start >= readerBegin());
-            const char* pos = std::search(start, writerBegin(), kCRLF, kCRLF+2);
+            const char* wb = writerBegin();
+            const char* pos = std::search(start, wb, kCRLF, kCRLF+2);
             return pos==writerBegin()?NULL:pos;
         }
 
@@ -59,7 +63,7 @@ namespace webserver{
         void prepend(char* data, size_t len){
             assert(prependableBytes() >= len);
             readerIndex_ -= len;
-            std::copy(data, data+len, readerIndex_);
+            std::copy(data, data+len, readerBegin());
             
         }
 
@@ -90,7 +94,7 @@ namespace webserver{
         ssize_t readFromFd(int fd){
             iovec vec[2];
             char buf[65535];
-            size_t writable = writableBytes();
+            size_t writable = writableBytes(); 
             vec[0].iov_base = writerBegin();
             vec[0].iov_len = writable;
             vec[1].iov_base = buf;
@@ -105,7 +109,7 @@ namespace webserver{
                     hasWritten(writable);
                     size_t over = n - writable;
                     makeWritingSpace(over);
-                    append(buf, sizeof(buf) - over);
+                    append(buf, over);
                 }
             }
             return ret;

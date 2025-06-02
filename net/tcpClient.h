@@ -11,7 +11,9 @@ public:
     :   loop_(loop), 
         name_(name),
         connector_(new Connector(loop, serverAddress)),
-        mutex_()
+        mutex_(),
+        connectCallback_(detail::defaultConnectCallback),
+        messageCallback_(detail::defaultMessageCallback)
     {
         connector_->setNewConnectionCallback(bind(&TcpClient::newConnection, this, std::placeholders::_1));
     }
@@ -44,7 +46,7 @@ public:
         highWaterCallback_ = cb;
     }
 
-    void setWriteCompleteCallback(size_t highWaterBytes, WriteCompleteCallback cb){
+    void setWriteCompleteCallback(WriteCompleteCallback cb){
         writeCompleteCallback_ = cb;
     }
 
@@ -68,13 +70,14 @@ private:
         loop_->assertInLoopThread();//如果立即可以连接就不会在channel中进行。而会在pendingFunctor中。
         char buf[name_.size() + numeric_limits<int>::max_digits10 + 12];
         int len = snprintf(buf, sizeof(buf), "%s:conn", name_.c_str());
+        LOG_DEBUG << "client create connection " << buf;
         {
             MutexLockGuard lock(mutex_);
             connection_.reset(new TcpConnection(fd, string_view(buf, len), loop_));
         }
 
-        connection_->setMessageCallback(detail::defaultMessageCallback);
-        connection_->setConnectCallback(detail::defaultConnectCallback);
+        connection_->setMessageCallback(messageCallback_);
+        connection_->setConnectCallback(connectCallback_);
         if(highWaterCallback_){
             connection_->setHighWaterCallback(highWaterBytes_, highWaterCallback_);
         }
@@ -83,7 +86,9 @@ private:
         }
 
         //注意，在析构时会先析构自己，再析构成员。所以如果close在TcpClient析构之后会出错。需要先重置connectionClosed函数。
+        LOG_DEBUG << "client new connection";
         connection_->setCloseCallback(bind(&TcpClient::connectionClosed, this));
+        connection_->connectEstablished();
     }
 
     void connectionClosed(){

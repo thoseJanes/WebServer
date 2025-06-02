@@ -9,6 +9,7 @@ namespace webserver{
 
 class TcpServer{
 public:
+    typedef EventThread::ThreadInitCallback ThreadInitCallback;
     TcpServer(EventLoop* baseLoop, string_view name, InetAddress addr, bool reusePort)
     :   loop_(baseLoop), 
         name_(name),
@@ -21,6 +22,7 @@ public:
         acceptor_->setNewConnectionCallback(bind(&TcpServer::newConnection, this, placeholders::_1));
     }
     ~TcpServer(){
+        LOG_DEBUG << "tcpServer "<<name_<<" dtor()";
         for(auto conn:connections_){
             loop_->runInLoop(bind(&TcpConnection::forceClose, conn.second));
         }
@@ -49,6 +51,7 @@ public:
     void startInLoop(){
         loop_->assertInLoopThread();
         acceptor_->listen();
+        LOG_INFO << "Server " << name_ << " start listen";
     }
 
 private:
@@ -57,8 +60,10 @@ private:
         
         char buf[name_.size() + numeric_limits<int>::max_digits10 + 12];
         int len = snprintf(buf, sizeof(buf), "%s:conn%d", name_.c_str(), connId_);
-        shared_ptr<TcpConnection> newConn(new TcpConnection(sockFd, string_view(buf, len-1), threadPool_->getNextLoop()));
-        connections_.insert({string(buf, len-1), newConn});
+        auto ioLoop = threadPool_->getNextLoop();
+        shared_ptr<TcpConnection> newConn(new TcpConnection(sockFd, string_view(buf, len), ioLoop));
+        assert(connections_.find(string(buf)) == connections_.end());
+        connections_.insert({string(buf), newConn});
         connId_++;
 
         newConn->setMessageCallback(messageCallback_);
@@ -70,6 +75,8 @@ private:
         if(writeCompleteCallback_){
             newConn->setWriteCompleteCallback(writeCompleteCallback_);
         }
+        LOG_DEBUG << "connection from " << newConn->peerAddressString() << " init. name " << string(buf);
+        ioLoop->runInLoop(bind(&TcpConnection::connectEstablished, newConn));
     }
 
     void removeConnection(shared_ptr<TcpConnection> conn){

@@ -27,6 +27,11 @@ namespace http{
         vHTTP1_1,
         vUNKNOW
     };
+    enum BodyType{
+        bTransferEncoding,
+        bContentLength,
+        bUntilClosed
+    };
 
     string versionToString(Version version){
         switch (version)
@@ -103,38 +108,48 @@ class HttpRequest{
 public:
     typedef http::Version Version;
     typedef http::Method Method;
+    typedef http::BodyType BodyType;
     HttpRequest(TimeStamp time):reqTime_(time){}
     ~HttpRequest(){}
 
-            const string& getHeaderValue(string& item) const {
-            if(header_.find(item) == header_.end()){
-                return "";
-            }
-            return header_.at(item);
+    const string& getHeaderValue(string& item) const {
+        if(header_.find(item) == header_.end()){
+            return "";
         }
-        const Version& getVersion(){
-            return version_;
+        return header_.at(item);
+    }
+    const string& getHeaderValue(string_view item) const {
+        string itemString = string(item);
+        if(header_.find(itemString) == header_.end()){
+            return "";
         }
-        const string& getBody(){
-            return body_;
-        }
-        
-        const string& setHeaderValue(string item, string value){
-            if(header_.find(item) == header_.end()){
-                header_.insert({item, value});
-            }else{
-                header_.at(item) = value;
-            }
-        }
-        void setVersion(Version version){
-            version_ = version;
-        }
-        void setBody(string_view str){
-            body_ = str;
-        }
+        return header_.at(itemString);
+    }
+    const Version& getVersion() const {
+        return version_;
+    }
+    const string& getBody() const {
+        return body_;
+    }
     
+    const string& setHeaderValue(string item, string value){
+        if(header_.find(item) == header_.end()){
+            header_.insert({item, value});
+        }else{
+            header_.at(item) = value;
+        }
+    }
+    void setVersion(Version version){
+        version_ = version;
+    }
+    void setBody(string_view str){
+        body_ = str;
+    }
+    void appendBody(string_view str){
+        body_.append(str);
+    }
 
-    const Method& getMethod(){return method_;}
+    const Method& getMethod() const {return method_;}
     void setMethod(Method method){
         method_ = method;
     }
@@ -170,8 +185,8 @@ public:
     void setMessage(string_view str){
         message_ = str;
     }
-    const string& getMessage(){return message_;}
-    const string& getPath(){return path_;}
+    const string& getMessage() const {return message_;}
+    const string& getPath() const {return path_;}
 
     bool valid() const {
         return version_!=http::vUNKNOW && method_ != http::mUNKNOW;
@@ -197,6 +212,17 @@ public:
     TimeStamp getRequestTime() const {
         return reqTime_;
     }
+
+    //当Content-Length和Transfer-Encoding同时出现时，优先处理Transfer-Encoding
+    BodyType getBodyType() const {
+        if(header_.find("Transfer-Encoding") != header_.end() && getHeaderValue("Transfer-Encoding") == "chunked"){
+            return BodyType::bTransferEncoding;
+        }else if(header_.find("Content-Length") != header_.end()){
+            return BodyType::bContentLength;
+        }else{
+            return BodyType::bUntilClosed;
+        }
+    }
 private:
     
     Method method_;
@@ -206,7 +232,10 @@ private:
     TimeStamp reqTime_;
     Version version_;
     map<string, string> header_;
+    
     string body_;
+
+    
     //const void* request_;
 };
 

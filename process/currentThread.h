@@ -4,6 +4,7 @@
 #include <sys/syscall.h>//SYS_gettid
 #include <stdio.h>
 #include <unistd.h>
+#include <string>
 
 namespace webserver{
 
@@ -15,6 +16,8 @@ extern __thread int t_tid;
 extern __thread char t_tidString[32];
 extern __thread int t_tidStringLen;
 extern __thread const char* t_threadName;
+
+std::string backTraceStacks(bool demangle = true);
 
 inline void cacheTid(){
     if(!t_tid){

@@ -9,12 +9,14 @@ namespace webserver{
 class HttpParser{
 public:
     /*
-        body部分有三种情况：
+        body部分有4种情况：
         1、头部存在Content-Length，则body长度为该选项对应值。
         2、头部存在Transfer-Encoding: chunked，则body由块决定，具体来说：
             每个块的格式为<length><CRLF><data><CRLF>
             当块结束时，会有一个长度为0的块来标识，即0\r\n\r\n
         3、以上两个选项都不存在，则在对端停止发送前皆为body。（Http 1.0，不可靠)
+
+        4、有些方法没有body，比如get！
 
         当Content-Length和Transfer-Encoding同时出现时，优先处理Transfer-Encoding
     */
@@ -28,21 +30,21 @@ public:
         sGotAll
     };
     HttpParser():state_(sExpectRequestLine){}
-    ~HttpParser();
+    ~HttpParser(){}
 
     bool parseRequestLine(const char* start, const char* end){
-        const char* mEnd = std::find(start, end, " ");
+        const char* mEnd = std::find(start, end, ' ');
         if(mEnd == end){
             return false;
         }
         request_->resolveMethod(string_view(start, mEnd-start));
         mEnd++;
 
-        const char* uEnd = std::find(mEnd, end, " ");
+        const char* uEnd = std::find(mEnd, end, ' ');
         if(uEnd == end){
             return false;
         }
-        const char* meStart = std::find(mEnd, uEnd, "?");
+        const char* meStart = std::find(mEnd, uEnd, '?');
         request_->setPath(string_view(mEnd, meStart-mEnd));
         if(meStart != uEnd){
             meStart++;
@@ -59,7 +61,7 @@ public:
             end--;
         }
         end++;
-        const char* valueStart = std::find(start, end, ":");
+        const char* valueStart = std::find(start, end, ':');
         const char* itemStart = start;
         const char* itemEnd = valueStart-1;
         while(*itemEnd == ' '){
@@ -79,7 +81,9 @@ public:
     }
     ParserState freshBodyTypeStatus(){
         bodyType_ = request_->getBodyType();
-        if(bodyType_ == BodyType::bContentLength){
+        if(bodyType_ == BodyType::bNoBody){
+            return sGotAll;
+        }else if(bodyType_ == BodyType::bContentLength){
             remainingBlockLen_ = static_cast<size_t>(atol(request_->getHeaderValue("Content-Length").c_str()));
             if(remainingBlockLen_ > 0){
                 return sExpectConetentBody;
@@ -92,6 +96,7 @@ public:
             return sExpectConetentBody;
         }else{
             LOG_FATAL << "Unknow body type";
+            abort();
         }
     }
 
@@ -107,7 +112,7 @@ public:
                 const char* end = buf->findCRLF(buf->readerBegin());
                 if(end==NULL){
                     hasMore = false;
-                }else if(parseRequestLine(buf->begin(), end)){
+                }else if(parseRequestLine(buf->readerBegin(), end)){
                     state_ = sExpectRequestHeader;
                     buf->retrieveTo(end+2);
                 }else{
@@ -193,7 +198,7 @@ public:
     const HttpRequest* getRequest(){
         return request_.get();
     }
-    HttpRequest reset(){
+    void reset(){
         request_.reset();
         state_ = sExpectRequestLine;
     }

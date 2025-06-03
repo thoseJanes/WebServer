@@ -24,3 +24,6 @@ target_link_libraries(eventLoopTest ${WEBSERVER_BASE_LIB})
 
 add_executable(tcpServerTest tcpServerTest.cpp)
 target_link_libraries(tcpServerTest ${WEBSERVER_BASE_LIB})
+
+add_executable(httpServerTest httpServerTest.cpp)
+target_link_libraries(httpServerTest ${WEBSERVER_BASE_LIB})

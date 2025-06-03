@@ -21,13 +21,14 @@ aux_source_directory(time SOURCE_FILES)
 aux_source_directory(event SOURCE_FILES)
 aux_source_directory(net SOURCE_FILES)
 aux_source_directory(poller SOURCE_FILES)
+aux_source_directory(http SOURCE_FILES)
 # 添加可执行文件
 # add_executable(MyExecutable ${SOURCE_FILES})
 add_library(webserver_base ${SOURCE_FILES})
 target_link_libraries(webserver_base pthread rt)
 
 
-add_executable(testProgram ./test/tcpServerTest.cpp)
+add_executable(testProgram ./test/httpServerTest.cpp)
 target_link_libraries(testProgram webserver_base)
 
 

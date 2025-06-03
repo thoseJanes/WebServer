@@ -8,6 +8,24 @@
 
 namespace webserver{
 
+namespace detail{
+
+void afterFork(){
+    CurrentThread::t_tid = 0;
+    CurrentThread::tid();
+}
+
+class ThreadInitializer{
+public:
+    ThreadInitializer(){
+        pthread_atfork(NULL, NULL, &detail::afterFork);
+    }
+};
+
+ThreadInitializer threadInitializer;
+}
+
+
 namespace CurrentThread{
 
     

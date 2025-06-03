@@ -59,12 +59,12 @@ private:
         loop_->assertInChannelHandling();
         
         char buf[name_.size() + numeric_limits<int>::max_digits10 + 12];
-        int len = snprintf(buf, sizeof(buf), "%s:conn%d", name_.c_str(), connId_);
+        int len = snprintf(buf, sizeof(buf), "%s:conn%d", name_.c_str(), connId_++);
         auto ioLoop = threadPool_->getNextLoop();
         shared_ptr<TcpConnection> newConn(new TcpConnection(sockFd, string_view(buf, len), ioLoop));
         assert(connections_.find(string(buf)) == connections_.end());
         connections_.insert({string(buf), newConn});
-        connId_++;
+
 
         newConn->setMessageCallback(messageCallback_);
         newConn->setConnectCallback(connectCallback_);
@@ -80,6 +80,10 @@ private:
     }
 
     void removeConnection(shared_ptr<TcpConnection> conn){
+        loop_->runInLoop(bind(&TcpServer::removeConnectionInLoop, this, conn));//注意，这是由于removeConnection线程处于ioLoop中，但需要在baseLoop中更新连接列表
+    }
+
+    void removeConnectionInLoop(shared_ptr<TcpConnection> conn){
         loop_->assertInLoopThread();
         auto connIt = connections_.find(conn->nameString());
         connections_.erase(connIt);

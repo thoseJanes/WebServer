@@ -7,19 +7,21 @@ namespace webserver{
 
 class TcpClient{
 public:
-    TcpClient(EventLoop* loop, string_view name, InetAddress serverAddress)
+    TcpClient(EventLoop* loop, string_view name, InetAddress serverAddress, bool enableRetry = true)
     :   loop_(loop), 
         name_(name),
         connector_(new Connector(loop, serverAddress)),
         mutex_(),
         connectCallback_(detail::defaultConnectCallback),
-        messageCallback_(detail::defaultMessageCallback)
+        messageCallback_(detail::defaultMessageCallback),
+        retry_(enableRetry),
+        connId_(0)
     {
         connector_->setNewConnectionCallback(bind(&TcpClient::newConnection, this, std::placeholders::_1));
     }
-
+ 
     ~TcpClient(){
-        loop_->assertInLoopThread();
+        //loop_->assertInLoopThread();
         shared_ptr<TcpConnection> conn;
         bool unique;
         {
@@ -38,7 +40,25 @@ public:
     }
 
     void connect(){
+        connect_ = true;
         connector_->start();
+    }
+
+    //返回是否成功，只有在存在连接时，才能成功
+    bool disConnect(){
+        connect_ = false;
+        MutexLockGuard lock(mutex_);
+        if(connection_){
+            connection_->shutdownWrite();
+            return true;
+        }else{
+            return false;
+        }
+    }
+    //尽力。应当用在retry期间。
+    void stopConnector(){
+        connect_ = false;
+        connector_->stop();
     }
     
     void setHighWaterCallback(size_t highWaterBytes, HighWaterCallback cb){
@@ -69,7 +89,7 @@ private:
     void newConnection(int fd){
         loop_->assertInLoopThread();//如果立即可以连接就不会在channel中进行。而会在pendingFunctor中。
         char buf[name_.size() + numeric_limits<int>::max_digits10 + 12];
-        int len = snprintf(buf, sizeof(buf), "%s:conn", name_.c_str());
+        int len = snprintf(buf, sizeof(buf), "%s:conn%d", name_.c_str(), connId_++);
         LOG_DEBUG << "client create connection " << buf;
         {
             MutexLockGuard lock(mutex_);
@@ -92,12 +112,16 @@ private:
     }
 
     void connectionClosed(){
+        loop_->assertInLoopThread();
         assert(connection_);
         {
             MutexLockGuard lock(mutex_);
             connection_.reset();
         }
-        loop_->runInLoop(bind(&Connector::restart, connector_));
+        if(retry_ && connect_){
+            connector_->restart();
+        }
+        
     }
     
     EventLoop* loop_;
@@ -111,6 +135,12 @@ private:
     MessageCallback messageCallback_;
     ConnectCallback connectCallback_;
     string name_;
+
+    int connId_;
+
+    //状态
+    bool connect_;
+    bool retry_;
 };
 
 }

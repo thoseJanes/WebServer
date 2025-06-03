@@ -77,7 +77,7 @@ public:
 
 
     void forceClose();
-    void closeInLoop();
+    
 
     void shutdownWrite();
 
@@ -110,6 +110,7 @@ private:
     void handleRead();
     void handleError();
     void handleClose();
+    void closeInLoop();
 
     void startReadInLoop();
     void stopInReadLoop();

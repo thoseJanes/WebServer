@@ -22,7 +22,6 @@ TcpConnection::TcpConnection(int fd, string_view name, EventLoop* loop)
     peerAddr_(socket_.getPeerAddr()),
     state_({sConnecting, false})
 {
-    
     //channel在执行回调时，TcpConnection必须存在。
     channel_->setCloseCallback(bind(&TcpConnection::handleClose, this));
     channel_->setErrorCallback(bind(&TcpConnection::handleError, this));
@@ -80,12 +79,12 @@ void TcpConnection::sendInLoop(const void* data, size_t len){
     //     return;
     // }
     loop_->assertInLoopThread();
-    size_t remain = len;
+    size_t remaining = len;
     if(!channel_->isWritingEnabled() && outputBuffer_.readableBytes() == 0){
         ssize_t sent = socket_.write(static_cast<const char*>(data), len);
         if(sent >= 0){
-            remain -= static_cast<size_t>(sent);
-            if(remain == 0 && writeCompleteCallback_){
+            remaining -= static_cast<size_t>(sent);
+            if(remaining == 0 && writeCompleteCallback_){
                 writeCompleteCallback_(shared_from_this());
             }
         }else{
@@ -94,12 +93,12 @@ void TcpConnection::sendInLoop(const void* data, size_t len){
         }
     }
     //什么情况下可以直接发送数据?
-    if(remain > 0){
+    if(remaining > 0){
         auto size = outputBuffer_.readableBytes();
-        outputBuffer_.append(static_cast<const char*>(data) + len - remain, remain);
-        assert(outputBuffer_.readableBytes() == size + remain);
-        if(size+remain >= highWaterBytes_ && size < highWaterBytes_ && highWaterCallback_){
-            highWaterCallback_(shared_from_this(), size+remain);
+        outputBuffer_.append(static_cast<const char*>(data) + len - remaining, remaining);
+        assert(outputBuffer_.readableBytes() == size + remaining);
+        if(size+remaining >= highWaterBytes_ && size < highWaterBytes_ && highWaterCallback_){
+            highWaterCallback_(shared_from_this(), size+remaining);
         }
 
         if(!channel_->isWritingEnabled() && state_.connState == sConnected){
@@ -168,8 +167,8 @@ void TcpConnection::handleRead(){
     if(ret < 0){
         LOG_SYSERROR << "Failed in TcpConnection::handleRead() when calling readFromFd().";
         handleError();
-    }else if(ret == 0){//表示对端已经关闭了连接。
-        LOG_ERROR << "read zero from "<< name_;
+    }else if(ret == 0){//表示对端已经关闭了写操作。这时候
+        LOG_DEBUG << "read zero from "<< name_;
         handleClose();
     }else{
         if(messageCallback_){
@@ -185,7 +184,7 @@ void TcpConnection::handleError(){
              ;//<< "\n" << "backTrace:" << CurrentThread::backTraceStacks(true);
 }
 void TcpConnection::handleClose(){
-    LOG_ERROR << "start handle close from "<< name_;
+    LOG_DEBUG << "start handle close from "<< name_;
     state_.setConnectionState(sDisConnecting);
     loop_->queueInLoop(bind(&TcpConnection::closeInLoop, this));//能保证加在目前的最后面执行，且可以安全地操作channel。
 }

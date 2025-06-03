@@ -145,13 +145,23 @@ public:
 
 
     void assertInLoopThread(){//需要打印调用堆栈。需要用宏定义打印__FILE__和__LINE__吗？
-        assert(isInLoopThread());
+        if(!isInLoopThread()){
+            LOG_FATAL << "Function is in thread "<< CurrentThread::tidString() << " but expected in thread " << threadTid_;
+        }
     }
     void assertInChannelHandling(){
-        assert(isInLoopThread() && handlingChannels_);
+        if(!isInLoopThread()){
+            LOG_FATAL << "Function is in thread "<< CurrentThread::tidString() << " but expected in thread " << threadTid_;
+        }else if(!handlingChannels_){
+            LOG_FATAL << "Function is in right thread " << threadTid_ << " but not handling channels";
+        }
     }
     void assertInPendingFunctors(){
-        assert(isInLoopThread() && handlingPendingFuncs_);
+        if(!isInLoopThread()){
+            LOG_FATAL << "Function is in thread "<< CurrentThread::tidString() << " but expected in thread " << threadTid_;
+        }else if(!handlingPendingFuncs_){
+            LOG_FATAL << "Function is in right thread " << threadTid_ << " but not handling pending functors";
+        }
     }
     bool isInLoopThread(){
         return threadTid_ == CurrentThread::tid();

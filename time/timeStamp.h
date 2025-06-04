@@ -24,7 +24,7 @@ public:
         tm tmstruct;
         gmtime_r(&seconds, &tmstruct);
         
-        char buf[32];
+        char buf[64];
         if(showMicroSeconds){
             snprintf(buf, sizeof(buf), "%04d%02d%02d %02d:%02d:%02d.%06dZ", 
                     tmstruct.tm_year+1900, tmstruct.tm_mon+1, tmstruct.tm_mday, 

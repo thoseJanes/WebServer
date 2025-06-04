@@ -47,6 +47,7 @@ bool sockets::isSelfConnect(int fd){
                 && hAddr.addr6.sin6_port == pAddr.addr6.sin6_port;
     }else{
         LOG_FATAL << "unknow address faimily:" << hAddr.addr.sin_family << ".";
+        abort();
     }
 }
 

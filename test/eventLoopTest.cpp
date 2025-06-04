@@ -25,7 +25,7 @@ void threadInitCallback(EventThread* thread){
 
 std::atomic<int> cbId(0);
 int main(){
-    putenv("WEBSERVER_LOG_TRACE");
+    Global::setGlobalLogLevel(Logger::LogLevel::Debug);
     LOG_TRACE << "trace" << 0  << -1;
     LOG_DEBUG << "debug" << 0  << -1;
     LOG_INFO << "info" << 0  << -1;

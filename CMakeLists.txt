@@ -22,14 +22,22 @@ aux_source_directory(event SOURCE_FILES)
 aux_source_directory(net SOURCE_FILES)
 aux_source_directory(poller SOURCE_FILES)
 aux_source_directory(http SOURCE_FILES)
+aux_source_directory(mysql SOURCE_FILES)
 # 添加可执行文件
 # add_executable(MyExecutable ${SOURCE_FILES})
 add_library(webserver_base ${SOURCE_FILES})
 target_link_libraries(webserver_base pthread rt)
 
 
-add_executable(testProgram ./test/httpServerTest.cpp)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
+find_package(MySQL REQUIRED)
+target_include_directories(webserver_base PRIVATE ${MYSQL_INCLUDE_DIR})
+target_link_libraries(webserver_base ${MYSQL_LIB})
+
+
+add_executable(testProgram ./test/mysqlTest.cpp)
 target_link_libraries(testProgram webserver_base)
+target_link_libraries(testProgram ${MYSQL_LIB})
 
 
 # install(TARGETS webserver_base DESTINATION lib)
@@ -42,7 +50,10 @@ target_link_libraries(testProgram webserver_base)
 #     "time/*.h"
 #     "event/*.h"
 #     "net/*.h"
-#     "poller/*.h")
+#     "poller/*.h"
+#     "http/*.h"
+#     "mysql/*.h"
+#     )
 # # install(FILES ${HEADERS} DESTINATION include/webserver/base)
 # # 为每个文件生成安装路径
 # foreach(file ${HEADERS})

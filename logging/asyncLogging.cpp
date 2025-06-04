@@ -64,7 +64,7 @@ void AsyncLogging::loggingThreadFunc(){
 
         if(buffers.size() > 25){
             char buf[128];
-            int len = snprintf(buf, sizeof buf, "Discard %d buffers.\n", buffers.size()-2);
+            int len = snprintf(buf, sizeof buf, "Discard %ld buffers.\n", buffers.size()-2);
             output_.append(buf, len);
             buffers.resize(2);//这里抛弃的buffer是最新的buffer？（为了防止无效输出淹没真正错误原因）
         }

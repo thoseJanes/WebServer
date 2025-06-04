@@ -3,36 +3,16 @@
 
 #include "../common/patterns.h"
 #include "logStream.h"
+#include "../common/fileUtil.h"
 
 
 namespace webserver{
 
-namespace detail{
-class SourceFile{
-public:
-    template<int N>
-    SourceFile(const char(&arr)[N]):len(N-1), name(arr){//注意字符数组长度包含最后的'\0'
-        auto slash = strrchr(arr, '/');
-        if(slash){
-            name = slash + 1;
-            len -= slash-arr;
-        }
-    }
-    explicit SourceFile(const char* arr):name(arr){//注意字符数组长度包含最后的'\0'
-        auto slash = strrchr(arr, '/');
-        if(slash){
-            name = slash + 1;
-        }
-        len = static_cast<int>(strlen(name));
-    }
-    int len;
-    const char* name;
-};
-}
 
 
 
-inline LogStream& operator<<(LogStream& stream, const detail::SourceFile file){
+
+inline LogStream& operator<<(LogStream& stream, const detail::FileSource file){
     stream.withFormat(file.len, "%s", file.name);
     return stream;
 }
@@ -41,7 +21,7 @@ class Logger:Noncopyable{
 public:
     typedef void (*OutputFunc)(const char*, int);
     typedef void (*FlushFunc)();
-    typedef detail::SourceFile SourceFile;
+    typedef detail::FileSource SourceFile;
     enum LogLevel{
         Trace,
         Debug,

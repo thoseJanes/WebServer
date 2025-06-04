@@ -1,4 +1,5 @@
 #include "httpRequest.h"
+#include "../logging/logger.h"
 
 namespace webserver{
 
@@ -28,7 +29,7 @@ string http::methodToString(Method method){
     METHOD_TO_STRING_GENERATOR(PUT)
     METHOD_TO_STRING_GENERATOR(DELETE)
     METHOD_TO_STRING_GENERATOR(TRACE)
-    else{assert(false);}
+    else{LOG_FATAL << "Failed in methodToString(). Method is wrong.";abort();}
     #undef METHOD_TO_STRING_GENERATOR
 }
 

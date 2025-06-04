@@ -25,6 +25,7 @@ public:
         server_.start(threadNum, threadInitCallback);
     }
 
+    //httpCallback会在读完消息后，在channel处理处被调用。
     void setHttpCallback(HttpCallback cb){
         httpCallback_ = cb;
     }

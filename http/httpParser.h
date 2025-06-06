@@ -6,6 +6,10 @@
 #include <memory>
 namespace webserver{
 
+
+
+
+
 class HttpParser{
 public:
     /*
@@ -57,22 +61,15 @@ public:
         return request_->valid();
     }
     bool parseRequestHeader(const char* start, const char* end){
-        while(*end == ' '){
-            end--;
-        }
-        end++;
+        //string_view str = http::trim(start, end);
+
         const char* valueStart = std::find(start, end, ':');
         const char* itemStart = start;
         const char* itemEnd = valueStart-1;
-        while(*itemEnd == ' '){
-            itemEnd --;
-        }
-        itemEnd ++;
-        valueStart++;
-        size_t itemLen = static_cast<size_t>(itemEnd-itemStart);
-        size_t valueLen = static_cast<size_t>(end-valueStart);
-        if(itemLen){
-            request_->setHeaderValue(string(itemStart, itemLen), string(valueStart, valueLen));
+        string_view key = http::trim(start, valueStart);
+        string_view value = http::trim(valueStart+1, end);
+        if(key.length() > 0){
+            request_->setHeaderValue(string(key), string(value));
             return true;
         }else{
             return false;

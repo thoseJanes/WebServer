@@ -5,14 +5,41 @@
 #include "httpResponse.h"
 namespace webserver{
 
+class ContextMap:Noncopyable{
+public:
+    void setContext(string key, void* value) {
+        assert(!hasContext(key));
+        context_.insert({key, value});
+    }
+    bool hasContext(string key) {
+        return context_.find(key) != context_.end();
+    }
+    void* getContext(string key) {
+        return context_.at(key);
+    }
+    void removeContext(string key){
+        auto ret = context_.erase(key);
+        assert(ret == 1);
+    }
+private:
+    std::map<string, void*> context_;
+};
+
+struct HttpContex{
+    HttpParser* paser;
+    ContextMap context;
+};
+
 namespace http{
-void defaultHttpCallback(const shared_ptr<TcpConnection>& conn, const HttpRequest* request);
+void defaultHttpCallback(const HttpRequest* request, HttpResponse* response, ContextMap& context);
 }
 
 class HttpServer{
 public:
-    typedef function<void(const shared_ptr<TcpConnection>& conn, const HttpRequest* request)> HttpCallback;
+    // typedef function<void(const shared_ptr<TcpConnection>& conn, const HttpRequest* request)> HttpCallback;
+    typedef function<void(const HttpRequest* request, HttpResponse* response, ContextMap& context)> HttpCallback;
     typedef TcpServer::ThreadInitCallback ThreadInitCallback;
+    typedef function<void(bool connected, ContextMap& context)> ConnectionConnectCallback;
     HttpServer(EventLoop* baseLoop, string_view name, InetAddress serverAddress, bool reusePort = false)
     :   server_(baseLoop, name, serverAddress, reusePort),
         httpCallback_(http::defaultHttpCallback)
@@ -27,7 +54,13 @@ public:
 
     //httpCallback会在读完消息后，在channel处理处被调用。
     void setHttpCallback(HttpCallback cb){
+        assert(!server_.isStarted());
         httpCallback_ = cb;
+    }
+
+    void setConnectionConnectCallback(ConnectionConnectCallback cb){
+        assert(!server_.isStarted());
+        connConnectCallback_ = cb;
     }
 
     ~HttpServer(){}
@@ -36,16 +69,31 @@ private:
         LOG_DEBUG << "on connect!";
         if(conn->isConnected()){
             HttpParser* paser = new HttpParser();
-            conn->setContext(paser);
+            HttpContex* httpContext = new HttpContex();
+            httpContext->paser = paser;
+            conn->setContext(httpContext);
+            httpContext->context.setContext("CONNECTION", conn.get());//仅供测试？
+            
+            if(connConnectCallback_){
+                connConnectCallback_(true, httpContext->context);
+            }
         }else{
-            HttpParser* paser = any_cast<HttpParser*>(conn->getContext());
-            delete paser;
+            HttpContex* httpContext = any_cast<HttpContex*>(conn->getContext());
+            if(connConnectCallback_){
+                connConnectCallback_(false, httpContext->context);
+            }
+
+            
+            delete httpContext->paser;
+            delete httpContext;
         }
     }
     
     void onMessage(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp time){
         LOG_DEBUG << "on message!";
-        HttpParser* paser = any_cast<HttpParser*>(conn->getContext());
+        conn->assertInIoLoop();
+        HttpContex* httpContext = any_cast<HttpContex*>(conn->getContext());
+        HttpParser* paser = httpContext->paser;
         //paser->parseRequest(buffer, time);
         LOG_DEBUG << "start resolve";
         LOG_DEBUG << string(buffer->readerBegin(), buffer->readableBytes());
@@ -54,7 +102,10 @@ private:
             if(paser->parseRequest(buffer, time)){//解析成功
                 toBeResolved = false;
                 if(paser->getState() == HttpParser::sGotAll){//一个请求解析完成
-                    httpCallback_(conn, paser->getRequest());
+                    HttpResponse response;
+                    httpCallback_(paser->getRequest(), &response, httpContext->context);
+                    conn->send(response.toString());
+
                     paser->reset();
                     if(buffer->readableBytes() > 0){//是否应该继续读取？两条请求可能同时发过来？
                         toBeResolved = true;
@@ -71,6 +122,7 @@ private:
     }
     TcpServer server_;
     HttpCallback httpCallback_;
+    ConnectionConnectCallback connConnectCallback_;
 };
 }
 

@@ -1,6 +1,7 @@
 #ifndef WEBSERVER_HTTP_HTTPREQUEST_H
 #define WEBSERVER_HTTP_HTTPREQUEST_H
 #include <string>
+#include <string_view>
 #include <map>
 #include <assert.h>
 #include "../time/timeStamp.h"
@@ -34,8 +35,15 @@ namespace http{
     string versionToString(Version version);
 
     string methodToString(Method method);
+
+    map<string, string> resolveContentPair(string_view content, char splitChar);
+
+    //const map<string, string> suffixToContentType;
     
-    
+    string getContentType(string& dir);
+
+    string_view trim(const char* start, const char* end);
+
     // class HttpMessage{
     // public:
     //     typedef http::Version Version;
@@ -169,11 +177,13 @@ public:
         string out;
         if(!valid()){return "";}
         out += http::methodToString(method_);
+        out += " ";
         out += path_;
         if(!message_.empty()){
             out += "?";
             out += message_;
         }
+        out += " ";
         out += http::versionToString(version_);
         out += "\r\n";
         for(auto it = header_.begin();it!=header_.end();it++){
@@ -199,6 +209,8 @@ public:
             return BodyType::bUntilClosed;
         }
     }
+
+
 private:
     
     Method method_;

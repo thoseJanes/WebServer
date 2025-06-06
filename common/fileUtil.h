@@ -60,23 +60,79 @@ private:
     int len;
     const char* dir;
 };
+
+
+bool fileExists(string_view path);
+
+int readToBuffer(int fd, char* buf, size_t maxSize, int* err);
 }
 
 
 
 class SmallFileReader{
 public:
-    SmallFileReader(StringArg path, int maxSize = 64*1024-1):fd_(open(path.c_str(), O_CLOEXEC|O_RDONLY)){
+    SmallFileReader(StringArg path, size_t maxSize = 64*1024-1):fd_(open(path.c_str(), O_CLOEXEC|O_RDONLY)), mayHaveMore_(true){
         buf_[0] = '\0';
+        len_ = 0;
         assert(fd_ >= 0);
+        
         toBuffer(maxSize);
     }
-    string_view toStringView();
+    bool mayHaveMore(){return mayHaveMore_;}
+    int continueReadOverwritesBuffer();
+    string_view toStringView(){
+        return string_view(buf_, len_);
+    }
+    string toString(){
+        return string(buf_);
+    }
 private:
-    int toBuffer(int maxSize);
+    int toBuffer(size_t maxSize);
+    
     int fd_;
     char buf_[64*1024];
+    size_t len_;
+    bool mayHaveMore_;
 };
+
+class AdaptiveFileReader{
+public:
+    AdaptiveFileReader(StringArg path, size_t minBufferSize = 64*1024-1)
+    :   fd_(open(path.c_str(), O_CLOEXEC|O_RDONLY)), 
+        mayHaveMore_(true),
+        bufInit_(false),
+        len_(0),
+        bufSize_(0)
+    {
+        assert(fd_ >= 0);
+        
+        toBuffer(minBufferSize);
+    }
+    bool mayHaveMore(){return mayHaveMore_;}
+    int continueReadOverwritesBuffer();
+    string_view toStringView(){
+        return string_view(buf_, len_);
+    }
+    string toString(){
+        return string(buf_);
+    }
+    ~AdaptiveFileReader(){
+        if(bufInit_){
+            free(buf_);
+        }
+    }
+private:
+    int toBuffer(size_t minBufferSize);
+    
+    int fd_;
+    char* buf_;
+    size_t bufSize_;
+    size_t len_;
+    bool mayHaveMore_;
+    bool bufInit_;
+};
+
+
 
 class FileAppender{
 public:

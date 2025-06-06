@@ -16,6 +16,12 @@ namespace detail{
         static_assert(*zero == '0', "zero pointer error.");
         static_assert(DIGIT <= 16 && DIGIT > 1);
         static_assert(is_integral<T>::value, "formatInteger: T must be an integer type.");
+        if(i==0){
+            *buf = '0';
+            buf[1] = '\0';
+            return 1;   
+        }
+        
         bool negative = (i<0);
         if(negative){
             *buf++ = '-';

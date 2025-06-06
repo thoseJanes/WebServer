@@ -2,7 +2,7 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<link href="game1_sheet.css" rel="stylesheet" type="text/css" />
+	<link href="game.css" rel="stylesheet" type="text/css" />
 	<title>game1</title>
 	<style>
 		.createcharacter{
@@ -64,7 +64,7 @@
 			position:relative;
 			float:right;
 			font-size: 15px;
-			width: 50px;
+			width: 80px;
 			padding: 5px;
 			cursor:pointer;
 			transition: all 0.4s;
@@ -78,7 +78,7 @@
 			bottom:10px;
 			float:right;
 			font-size: 15px;
-			width: 55px;
+			width: 85px;
 			padding: 5px;
 			cursor:pointer;
 			box-shadow: 0px 0px 5px 2px #44FC49;
@@ -97,14 +97,14 @@
 </head>
 
 <body style="overflow: hidden">
-	<div class="startbottons">
+	<div class="startbuttons">
 		<a value="开始" onclick="gameBegin(this.parentElement)">start</a>
-		<a value="继续">continue</a>
-		<a value="设置">config</a>
-		<a value="退出">exit</a>
+		<a value="继续" class="invalid">continue</a>
+		<a value="设置" class="invalid">config</a>
+		<a value="退出" href="\">exit</a>
 	</div>
 	<div class="createcharacter">
-		<form action = "createCharacter.cgi", method = "post">
+		<form action = "/createCharacter.cgi", method = "post">
 			<fieldset>
 				<legend>Create Your Character</legend>
 				<div>姓名:<input type="text" name="name"/><br/></div>
@@ -143,14 +143,12 @@
 				<div id="control">
 					<div id="lhpoint"></div>
 				<!--<div id="created" onClick="formget(this.parentElement)">&#62&#62</div>-->
-					<button id="created" type="submit">&#62&#62</button>
+					<button id="created" type="submit"><b>start&#62&#62</b></button>
 				</div>
-				
-				
 			</fieldset>
 		</form>
 	</div>
-	<script language="javascript" src="game1_js.js">
+	<script language="javascript" src="game.js">
 		
 	</script>
 </body>

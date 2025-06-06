@@ -65,6 +65,10 @@ public:
         connectCallback_ = cb;
     }
 
+    void assertInIoLoop(){
+        loop_->assertInLoopThread();
+    }
+
     void setTcpNoDelay(bool bl);
 
     void send(const void* buf, size_t len);
@@ -97,6 +101,20 @@ public:
         return state_.connState == sConnected;
     }
 
+    // void setContext(string key, void* context) const {
+    //     assert(!hasContext(key));
+    //     context_.insert({key, context});
+    // }
+    // bool hasContext(string key) const {
+    //     return context_.find(key) != context_.end();
+    // }
+    // void* getContext(string key) const {
+    //     return context_.at(key);
+    // }
+    // void removeContext(string key) const{
+    //     auto ret = context_.erase(key);
+    //     assert(ret == 1);
+    // }
     void setContext(std::any context) const {
         context_ = context;
     }
@@ -135,8 +153,8 @@ private:
     size_t highWaterBytes_;
     string name_;
 
+    //mutable std::map<string, void*> context_;
     mutable std::any context_;
-    
 };
 
 }

@@ -60,6 +60,7 @@ public:
             runPendingFunctions();
             handlingPendingFuncs_ = false;
         }
+        LOG_DEBUG << "loop over";
     }
 
     void quit(){

@@ -17,7 +17,8 @@ public:
         threadPool_(new EventThreadPool(baseLoop, name)),
         connId_(0),
         messageCallback_(detail::defaultMessageCallback),
-        connectCallback_(detail::defaultConnectCallback)
+        connectCallback_(detail::defaultConnectCallback),
+        started_(false)
     {
         acceptor_->setNewConnectionCallback(bind(&TcpServer::newConnection, this, placeholders::_1));
     }
@@ -29,22 +30,27 @@ public:
     }
     
     void setHighWaterCallback(size_t highWaterBytes, HighWaterCallback cb){
+        assert(!started_);
         highWaterCallback_ = cb;
         highWaterBytes_ = highWaterBytes;
     }
     void setWriteCompleteCallback(WriteCompleteCallback cb){
+        assert(!started_);
         writeCompleteCallback_ = cb;
     }
 
     void setMessageCallback(MessageCallback cb){
+        assert(!started_);
         messageCallback_ = cb;
     }
 
     void setConnectCallback(ConnectCallback cb){
+        assert(!started_);
         connectCallback_ = cb;
     }
     
     void start(int threadNum, EventThread::ThreadInitCallback initThreadCallback){
+        started_ = true;
         threadPool_->start(threadNum, initThreadCallback);//如果创建较多线程，貌似会在这里阻塞一会儿。是否需要放入loop运行？
         loop_->runInLoop(bind(&TcpServer::startInLoop, this));
     }
@@ -52,6 +58,10 @@ public:
         loop_->assertInLoopThread();
         acceptor_->listen();
         LOG_INFO << "Server " << name_ << " start listen";
+    }
+
+    bool isStarted(){
+        return started_;
     }
 
 private:
@@ -101,6 +111,7 @@ private:
     WriteCompleteCallback writeCompleteCallback_;
     MessageCallback messageCallback_;
     ConnectCallback connectCallback_;
+    bool started_;
 };
 
 }

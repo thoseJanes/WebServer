@@ -1,96 +1,40 @@
 @charset "utf-8";
 /* CSS Document */
 body{
-	/* background:url("241515.jpg") no-repeat right top; */
+	background:url("bg.png") no-repeat right top;
 	background-size:100%;
 	text-align: center;
 }
 
-/*重置button样式*/
-button {
-    /* 移除默认边框和背景 */
-    border: none;
-    background: none;
-	background-color: none;
-    
-    /* 移除浏览器默认的内边距和外观 */
-    padding: 0;
-    margin: 0;
-    outline: none; /* 移除点击时的焦点边框（可选） */
-    
-    /* 确保字体继承父元素（避免浏览器默认字体） */
-    font-family: inherit;
-    font-size: inherit;
-    color: inherit;
-    
-    /* 防止按钮被浏览器默认样式干扰 */
-    -webkit-appearance: none; /* Safari/Chrome */
-    -moz-appearance: none;    /* Firefox */
-    appearance: none;
+
+.startbuttons{
+	display: block;
+	position:relative;
+	text-align: center;
+	margin-top: 10%;
 }
-
-
-
-.startbottons{
-	/* position:relative; */
-	/* text-align: center; */
-	margin:10% 30%;
-	width: 40%;
-	/* text-align: center; */
-	/* float:right; */
-}
-.startbottons button{
-	background-color: #000000;
-	background: #000000;
+.startbuttons a{
+	display: inline-block;
+	text-align: center;
+	background: #3FD653;
 	opacity: 0.7;
-	color: #d3d3d3;
+	color: #080806;
 	font-style: italic;
-	font-size: 20px;
-	width: 75px;
-	display:block;
-	margin: 4% 13%;
-	padding: 7px;
+	font-size: 35px;
+	width: 100px;
+	height: 50px;
 	cursor:pointer;
+
 	transition: all 0.4s;
-	border-radius: 5px;
 }
-.startbottons button:hover {
-	background: #5fec3c;
+
+.startbuttons a:hover {
 	opacity: 0.9;
-	color: #050505;
-	font-style: italic;
-	font-size: 25px;
-	width: 80px;
-	margin: 3.7% 12%;
+	color: #080806;
 	cursor:pointer;
-	box-shadow: 0px 0px 6px 2px #48ff37;
-	border-color: #49d83c;
-	transition: all 0.4s;
-}
-.fadeout {
-	opacity: 0;
-	transition: all 0.4s;
-	
-}
-
-.userinput input{
-	width: 77%;
-	height: 40px;
-	background-color: black;
-	color: rgb(173, 167, 167);
-	font-size: large;
-	border-radius: 5px;
-	transition: all 0.4s;
-	margin-top: 30px;
-	
-}
-
-.userinput input:focus{
-	width: 79%;
-	height: 44px;
-	background-color: rgb(66, 66, 66);
-	color: rgb(226, 222, 222);
-	font-size: large;
-	border-radius: 5px;
+	font-size: 50px;
+	width: 120px;
+	height: 70px;
+	box-shadow: 0px 0px 8px 3px #3FD653;;
 	transition: all 0.4s;
 }

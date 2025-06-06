@@ -35,7 +35,7 @@ target_include_directories(webserver_base PRIVATE ${MYSQL_INCLUDE_DIR})
 target_link_libraries(webserver_base ${MYSQL_LIB})
 
 
-add_executable(testProgram ./test/mysqlTest.cpp)
+add_executable(testProgram ./test/httpServerTest.cpp)
 target_link_libraries(testProgram webserver_base)
 target_link_libraries(testProgram ${MYSQL_LIB})
 

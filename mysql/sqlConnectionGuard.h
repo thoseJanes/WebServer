@@ -40,12 +40,20 @@ public:
         // }
     }
 
+    void asssertQuery(const char* sentence){
+        int ret = mysql_query(connection_, sentence);//执行新查询时，会隐式释放一个结果集。
+        if(ret){
+            LOG_FATAL << "Failed in mysql query. error: " << mysql_error(connection_);
+        }
+        result_ = NULL;
+    }
+
     size_t getNumberOfRows(){
         if(!result_){
             result_ = mysql_store_result(connection_);
             if(!result_){
                 LOG_ERROR << "Failed in mysql_store_result. error: " << mysql_error(connection_);
-                return NULL;
+                return 0;
             }
         }
         return mysql_num_rows(result_);

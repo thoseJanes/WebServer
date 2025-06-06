@@ -161,7 +161,7 @@ private:
 
         MutexLockGuard lock(mutex_);
         //connNum_ += connNum;
-        LOG_DEBUG << "created " << newConnections.size() << " connections";
+        //LOG_DEBUG << "created " << newConnections.size() << " connections";
         //否，虽然知道load不会被fetch_add撕裂，但不知道是否会被普通+操作撕裂。
         connNum_.fetch_add(connNum);
         connections_.reserve(connNum_);

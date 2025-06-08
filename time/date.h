@@ -1,6 +1,5 @@
 #ifndef WEBSERVER_TIME_DATE_H
 #define WEBSERVER_TIME_DATE_H
-#include <boost/operators.hpp>
 
 namespace webserver{
 
@@ -11,8 +10,7 @@ struct YearMonthDay{
 };
 
 class TimeStamp;
-class Date : public boost::equality_comparable<Date>, 
-            public boost::less_than_comparable<Date>{
+class Date{
 public:
     Date():julianDay_(0){};
     Date(int julianDay):julianDay_(julianDay){};
@@ -31,12 +29,7 @@ private:
     int julianDay_;
 };
 
-inline bool operator<(const Date& d1, const Date& d2){
-    return d1.julianDay()<d2.julianDay();
-}
-inline bool operator==(const Date& d1, const Date& d2){
-    return d1.julianDay()==d2.julianDay();
-}
+
 
 struct DateTime{
     int year;
@@ -46,6 +39,22 @@ struct DateTime{
     int minute;
     int second;
 };
+
+
+
+#define DATE_OPERATOR_GENERATOR(op) \
+inline bool operator op (const Date& d1, const Date& d2){ \
+    return d1.julianDay() op d2.julianDay(); \
+}
+
+DATE_OPERATOR_GENERATOR(>)
+DATE_OPERATOR_GENERATOR(>=)
+DATE_OPERATOR_GENERATOR(<)
+DATE_OPERATOR_GENERATOR(<=)
+DATE_OPERATOR_GENERATOR(==)
+DATE_OPERATOR_GENERATOR(!=)
+#undef DATE_OPERATOR_GENERATOR
+
 
 }
 

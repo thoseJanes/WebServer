@@ -6,7 +6,7 @@
 namespace webserver{
 
 
-class SqlConnectionGuard{//这个类可以在SqlConnectionPool内部创建?或者声明为SqlConnectionPool的友元。
+class SqlConnectionGuard:Noncopyable{//这个类可以在SqlConnectionPool内部创建?或者声明为SqlConnectionPool的友元。
 //应当单线程使用。要传入loop吗？但是loop无法获取结果。
 //所以应当在栈上使用。
 public:

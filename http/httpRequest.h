@@ -91,7 +91,7 @@ public:
     typedef http::Version Version;
     typedef http::Method Method;
     typedef http::BodyType BodyType;
-    HttpRequest(TimeStamp time):reqTime_(time){}
+    HttpRequest(TimeStamp time):reqTime_(time), version_(http::vUNKNOW), method_(http::mUNKNOW){}
     ~HttpRequest(){}
 
     string getHeaderValue(string& item) const {
@@ -137,7 +137,6 @@ public:
     }
 
     void resolveMethod(string_view str){
-        
         #define RESOLVE_METHOD_GENERATOR(method) \
             else if(#method == str){setMethod(http::m ## method);}
 
@@ -210,6 +209,15 @@ public:
         }
     }
 
+    void swap(HttpRequest& that){
+        std::swap(method_, that.method_);
+        std::swap(version_, that.version_);
+        path_.swap(that.path_);
+        message_.swap(that.message_);
+        header_.swap(that.header_);
+        body_.swap(that.body_);
+        reqTime_.swap(that.reqTime_);
+    }
 
 private:
     

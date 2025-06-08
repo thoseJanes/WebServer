@@ -1,5 +1,5 @@
 #include "socket.h"
-
+#include "../process/currentThread.h"
 
 namespace webserver{
 
@@ -38,8 +38,30 @@ namespace sockets{//不仅为了包装，也为了过滤一些错误。留下待
         socklen_t addrLen = sizeof(UnionAddr);
         int connfd = ::accept(fd, (sockaddr*)addr, &addrLen);
         if(connfd<0){
-            switch(errno){
-                //各种错误处理，待学习
+            int err = errno;
+            switch(err){
+                case EAGAIN://资源暂时不可用，无数据或者缓冲区满
+                case ECONNABORTED://对端进程崩溃或强制关闭连接
+                case EINTR://系统调用被信号中断
+                case EPROTO://协议错误，硬件/协议栈故障
+                case EPERM://操作执行权限不足
+                case EMFILE://进程打开文件描述符数量超过限制
+                    errno = err;//把错误保留以供处理？
+                    break;
+                case EBADF://无效文件描述符
+                case ENOTSOCK://文件描述符不是socket
+                case EOPNOTSUPP://传入的socket不支持相应操作（accept）
+                case EFAULT://内存错误，地址指向不可访问内存
+                case EINVAL://参数无效
+
+                case ENFILE://系统全局文件描述符耗尽
+                case ENOBUFS://内核缓冲区不足，无法分配内核资源
+                case ENOMEM://内存不足，无法分配内核数据结构
+                    LOG_FATAL << "Unexpected error of ::accept: (" <<  err << ")" << strerror_tl(err);
+                    break;
+                default:
+                    LOG_FATAL << "Unknow error of ::accept: (" <<  err << ")" << strerror_tl(err);
+                    break;
             }
         }
         return connfd;

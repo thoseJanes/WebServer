@@ -11,11 +11,9 @@ namespace webserver{
 class Acceptor{
 public:
     Acceptor(EventLoop* loop, InetAddress addr, bool reusePort = false):loop_(loop), socket_(Socket::nonblockingSocket(addr.getFamily())), channel_(new Channel(socket_.fd(), loop)){
+        socket_.setReuseAddr(true);
+        socket_.setReusePort(reusePort);
         socket_.bind(addr);
-        socket_.setReusePort(true);
-        if(reusePort){
-            socket_.setReusePort(true);
-        }
         channel_->setReadableCallback(bind(&Acceptor::acceptableCallback, this));
         placeholderFd_ = sockets::createNonblockingSocket(addr.getFamily());//因为Socket会管理fd的生命周期，因此不能用Socket创建。
     }

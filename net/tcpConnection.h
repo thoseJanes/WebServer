@@ -1,7 +1,6 @@
 #ifndef WEBSERVER_NET_TCPCONNECTION_H
 #define WEBSERVER_NET_TCPCONNECTION_H
 
-
 #include "inetAddress.h"
 #include "connBuffer.h"
 #include "socket.h"
@@ -10,6 +9,7 @@
 #include "../process/currentThread.h"
 #include <functional>
 #include <memory>
+
 namespace webserver{
 class TcpConnection;
 typedef std::function<void(const shared_ptr<TcpConnection>&, ConnBuffer* buffer, TimeStamp timeStamp)> MessageCallback;
@@ -115,12 +115,16 @@ public:
     //     auto ret = context_.erase(key);
     //     assert(ret == 1);
     // }
-    void setContext(std::any context) const {
+
+
+    void setContext(const std::any& context) {
         context_ = context;
     }
-    std::any getContext() const {
+    
+    std::any getContext() {
         return context_;
     }
+
 private:
     void shutdownWriteInLoop();
 
@@ -153,8 +157,7 @@ private:
     size_t highWaterBytes_;
     string name_;
 
-    //mutable std::map<string, void*> context_;
-    mutable std::any context_;
+    std::any context_;
 };
 
 }

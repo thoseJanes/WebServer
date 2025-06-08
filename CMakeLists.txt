@@ -8,6 +8,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 # 设置链接器标志以加载动态符号表
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 #add_subdirectory(test)
 # set(SOURCE_FILES
 #   file1.cc
@@ -39,6 +44,8 @@ add_executable(testProgram ./test/httpServerTest.cpp)
 target_link_libraries(testProgram webserver_base)
 target_link_libraries(testProgram ${MYSQL_LIB})
 
+
+# 以下操作会将webserver安装到/usr/local/include目录下。
 
 # install(TARGETS webserver_base DESTINATION lib)
 # #install(TARGETS muduo_base_cpp11 DESTINATION lib)

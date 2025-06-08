@@ -3,6 +3,8 @@
 #include "../net/tcpServer.h"
 #include "httpParser.h"
 #include "httpResponse.h"
+
+
 namespace webserver{
 
 class ContextMap:Noncopyable{
@@ -25,19 +27,20 @@ private:
     std::map<string, void*> context_;
 };
 
-struct HttpContex{
+struct HttpContext{
     HttpParser* paser;
     ContextMap context;
 };
 
 namespace http{
 void defaultHttpCallback(const HttpRequest* request, HttpResponse* response, ContextMap& context);
+//void defaultHttpCallback(const HttpRequest* request, HttpResponse* response);
 }
 
 class HttpServer{
 public:
-    // typedef function<void(const shared_ptr<TcpConnection>& conn, const HttpRequest* request)> HttpCallback;
     typedef function<void(const HttpRequest* request, HttpResponse* response, ContextMap& context)> HttpCallback;
+    //typedef function<void(const HttpRequest* request, HttpResponse* response)> HttpCallback;
     typedef TcpServer::ThreadInitCallback ThreadInitCallback;
     typedef function<void(bool connected, ContextMap& context)> ConnectionConnectCallback;
     HttpServer(EventLoop* baseLoop, string_view name, InetAddress serverAddress, bool reusePort = false)
@@ -69,21 +72,22 @@ private:
         LOG_DEBUG << "on connect!";
         if(conn->isConnected()){
             HttpParser* paser = new HttpParser();
-            HttpContex* httpContext = new HttpContex();
+            HttpContext* httpContext = new HttpContext();
             httpContext->paser = paser;
+            //conn->setContext(HttpParser());
             conn->setContext(httpContext);
             httpContext->context.setContext("CONNECTION", conn.get());//仅供测试？
             
             if(connConnectCallback_){
                 connConnectCallback_(true, httpContext->context);
             }
-        }else{
-            HttpContex* httpContext = any_cast<HttpContex*>(conn->getContext());
+        }
+        else{
+            HttpContext* httpContext = any_cast<HttpContext*>(conn->getContext());
             if(connConnectCallback_){
                 connConnectCallback_(false, httpContext->context);
             }
 
-            
             delete httpContext->paser;
             delete httpContext;
         }
@@ -92,31 +96,37 @@ private:
     void onMessage(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp time){
         LOG_DEBUG << "on message!";
         conn->assertInIoLoop();
-        HttpContex* httpContext = any_cast<HttpContex*>(conn->getContext());
+        HttpContext* httpContext = any_cast<HttpContext*>(conn->getContext());
         HttpParser* paser = httpContext->paser;
-        //paser->parseRequest(buffer, time);
-        LOG_DEBUG << "start resolve";
-        LOG_DEBUG << string(buffer->readerBegin(), buffer->readableBytes());
+        
         bool toBeResolved = true;
         while(toBeResolved){
             if(paser->parseRequest(buffer, time)){//解析成功
                 toBeResolved = false;
                 if(paser->getState() == HttpParser::sGotAll){//一个请求解析完成
                     HttpResponse response;
-                    httpCallback_(paser->getRequest(), &response, httpContext->context);
+                    const HttpRequest* request = paser->getRequest();
+                    httpCallback_(request, &response, httpContext->context);
                     conn->send(response.toString());
+
+                    bool close = request->getHeaderValue("Connection") == "Close" || 
+                                (request->getVersion() == http::Version::vHTTP1_0 && 
+                                request->getHeaderValue("Connection") != "Keep-Alive");
+                    if(close){
+                        conn->shutdownWrite();
+                    }
 
                     paser->reset();
                     if(buffer->readableBytes() > 0){//是否应该继续读取？两条请求可能同时发过来？
                         toBeResolved = true;
                     }
-                }else{//解析未完成
-
                 }
             }else{//解析失败。
                 toBeResolved = false;
                 //关闭连接？还是先向回发送一个错误页面？
                 //conn->forceClose();
+                conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");
+                conn->shutdownWrite();
             }
         }
     }

@@ -27,18 +27,22 @@ printCmakeError(configure_result)
 build_command = ["cmake", "--build", base_build_dir]
 build_result = subprocess.run(build_command, capture_output=True, text=True)
 printCmakeError(build_result)
-# install
-install_command = ["sudo", "cmake", "--install", base_build_dir]
-install_result = subprocess.run(install_command, capture_output=True, text=True)
-printCmakeError(install_result)
 
-base_test_dir = os.path.join(source_dir, "test")
-base_test_build_dir = os.path.join(base_test_dir, "build")
-# Configure the project using CMake
-configure_command = ["cmake", "-S", base_test_dir, "-B", base_test_build_dir]# -S选项用于指定源代码目录。
-configure_result = subprocess.run(configure_command, capture_output=True, text=True)
-printCmakeError(configure_result)
-# Build the project using CMake
-build_command = ["cmake", "--build", base_test_build_dir]
+build_command = ["./", "--build", base_build_dir]
 build_result = subprocess.run(build_command, capture_output=True, text=True)
 printCmakeError(build_result)
+# # install
+# install_command = ["sudo", "cmake", "--install", base_build_dir]
+# install_result = subprocess.run(install_command, capture_output=True, text=True)
+# printCmakeError(install_result)
+
+# base_test_dir = os.path.join(source_dir, "test")
+# base_test_build_dir = os.path.join(base_test_dir, "build")
+# # Configure the project using CMake
+# configure_command = ["cmake", "-S", base_test_dir, "-B", base_test_build_dir]# -S选项用于指定源代码目录。
+# configure_result = subprocess.run(configure_command, capture_output=True, text=True)
+# printCmakeError(configure_result)
+# # Build the project using CMake
+# build_command = ["cmake", "--build", base_test_build_dir]
+# build_result = subprocess.run(build_command, capture_output=True, text=True)
+# printCmakeError(build_result)

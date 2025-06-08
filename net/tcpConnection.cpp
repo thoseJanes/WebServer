@@ -218,5 +218,7 @@ void TcpConnection::shutdownWrite(){
     }
 }
 void TcpConnection::shutdownWriteInLoop(){
-    socket_.shutDownWrite();
+    if(!channel_->isWritingEnabled()){
+        socket_.shutDownWrite();
+    }
 }

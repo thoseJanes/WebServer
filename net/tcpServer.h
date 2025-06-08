@@ -68,12 +68,16 @@ private:
     void newConnection(int sockFd){
         loop_->assertInChannelHandling();
         
-        char buf[name_.size() + numeric_limits<int>::max_digits10 + 12];
-        int len = snprintf(buf, sizeof(buf), "%s:conn%d", name_.c_str(), connId_++);
+        char buf[numeric_limits<size_t>::digits10 + 9];
+        int len = snprintf(buf, sizeof(buf), ":conn%ld", connId_++);
         auto ioLoop = threadPool_->getNextLoop();
-        shared_ptr<TcpConnection> newConn(new TcpConnection(sockFd, string_view(buf, len), ioLoop));
-        assert(connections_.find(string(buf)) == connections_.end());
-        connections_.insert({string(buf), newConn});
+        
+        string connName = name_ + buf;
+        assert(connections_.find(connName) == connections_.end());
+
+        shared_ptr<TcpConnection> newConn(new TcpConnection(sockFd, connName, ioLoop));
+        connections_[connName] = newConn;
+        //connections_.insert({connName, newConn});
 
 
         newConn->setMessageCallback(messageCallback_);
@@ -104,7 +108,7 @@ private:
     unique_ptr<Acceptor> acceptor_;
     map<string, shared_ptr<TcpConnection>> connections_;
     string name_;
-    int connId_;
+    size_t connId_;
 
     size_t highWaterBytes_;
     HighWaterCallback highWaterCallback_;

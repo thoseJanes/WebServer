@@ -6,8 +6,19 @@
 
 using namespace webserver;
 
+
+string sqlUser = "test_http";
+string password = "123456";
+string databaseName = "test_http_database";
+int sqlPort = 3306;
+
+char httpServerAddress[] = "127.0.0.1";
+int httpServerPort = 8000;
+int threadNum = 6;
+
 string rootDir = detail::FilePath(__FILE__).toString() + "/testResource";
-SqlConnectionPool sqlPool(5, "127.0.0.1", "testHttp", "123456", "test_http_database", 3306);//初始化sql连接池
+
+
 
 map<string, string> urlToPath{
     {"/favicon.ico", "/favicon32.png"},
@@ -33,9 +44,10 @@ class SqlConnectionUtil{
 */
 
 //由于传入response，会再复制一遍body，降低效率。或者直接将body设置成文件路径？这里先不管。
-void httpCallback(const HttpRequest* request, HttpResponse* response, ContextMap& context){
+void httpCallback(SqlConnectionPool* sqlPoolPtr, const HttpRequest* request, HttpResponse* response, ContextMap& context){
+    SqlConnectionPool& sqlPool = *sqlPoolPtr;
     TcpConnection* conn = static_cast<TcpConnection*>(context.getContext("CONNECTION"));
-    LOG_INFO << ">>>>>>>>>get request from " << conn->peerAddressString() << ":\n" << request->toString();
+    LOG_DEBUG << ">>>>>>>>>get request from " << conn->peerAddressString() << ":\n" << request->toString();
     auto path = request->getPath();
     response->setVersion(request->getVersion());
     if(request->getMethod() == http::Method::mGET){//获取网页、资源情况。
@@ -97,9 +109,6 @@ void httpCallback(const HttpRequest* request, HttpResponse* response, ContextMap
                     response->setBodyWithFile(fullPath);
 
                     string item = "Content-Type";
-                    if(response->getHeaderValue(item) == "image/png"){
-                        LOG_INFO << response->toString();
-                    }
                 }else{
                     response->setStatusCode(204);
                 }
@@ -181,10 +190,19 @@ void httpCallback(const HttpRequest* request, HttpResponse* response, ContextMap
         }
     }
 
-    LOG_INFO << "<<<<<<<send response (omit body):\n" << response->toStringWithoutBody();
+    LOG_DEBUG << "<<<<<<<send response (omit body):\n" << response->toStringWithoutBody();
 }
 
-int main(){
+int main(int argc, char* argv[]){
+    Global::setGlobalLogLevel(Logger::Warn);
+    // if(argc < 3){
+    //     LOG_FATAL << "Usage: " << argv[0] << " ipv4_address ip_port number_of_threads";
+    // }
+    // char* httpServerAddress = argv[1];
+    // int httpServerPort = atoi(argv[2]);
+    // int threadNum = atoi(argv[3]);
+
+    SqlConnectionPool sqlPool(threadNum, "127.0.0.1", sqlUser.c_str(), password.c_str(), databaseName.c_str(), sqlPort);//初始化sql连接池s
     {//初始化要用到的数据表。
         SqlConnectionGuard sqlConn(sqlPool);
         sqlConn.asssertQuery( \
@@ -196,7 +214,6 @@ int main(){
             ");" \
         );
 
-        //超过一定时间即清除会话。
         sqlConn.asssertQuery( \
             "CREATE TABLE IF NOT EXISTS sessions("\
             "id INT AUTO_INCREMENT PRIMARY KEY,"\
@@ -206,13 +223,13 @@ int main(){
             ");" \
         );
     }
-    Global::setGlobalLogLevel(Logger::Debug);
+    
     EventLoop baseLoop = EventLoop();
 
-    InetAddress serverAddress = InetAddress("127.0.0.1", 8081, AF_INET);
+    InetAddress serverAddress = InetAddress(httpServerAddress, httpServerPort, AF_INET);
     HttpServer httpServer(&baseLoop, string_view("server"), serverAddress);
-    httpServer.setHttpCallback(httpCallback);
-    httpServer.start(4);
+    httpServer.setHttpCallback(bind(&httpCallback, &sqlPool, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    httpServer.start(threadNum);
 
     baseLoop.loop();
 

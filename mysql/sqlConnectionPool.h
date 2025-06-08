@@ -54,8 +54,7 @@ void closeMysqlConnection(MYSQL* conn){
 
 }
 
-class SqlConnection;
-class SqlConnectionPool{
+class SqlConnectionPool:Noncopyable{
 public:
     SqlConnectionPool(int connNum, const char* host, const char* user, const char* pwd, const char* db, unsigned int port)
     :   mutex_(),

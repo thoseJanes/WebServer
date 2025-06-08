@@ -1,0 +1,225 @@
+{
+	"formatVersion": 2,
+	"appVersion": "0.63.7",
+	"files": [
+		{
+			"noteId": "T6oHLkEf75EY",
+			"notePath": [
+				"T6oHLkEf75EY"
+			],
+			"isClone": false,
+			"title": "README",
+			"notePosition": 40,
+			"prefix": null,
+			"isExpanded": true,
+			"type": "text",
+			"mime": "text/html",
+			"format": "markdown",
+			"dataFileName": "README.md",
+			"dirFileName": "README",
+			"noImport": false,
+			"attributes": [
+				{
+					"type": "relation",
+					"name": "internalLink",
+					"value": "2gCa2Imw37Ae",
+					"isInheritable": false,
+					"position": 10
+				},
+				{
+					"type": "relation",
+					"name": "internalLink",
+					"value": "lLib570bQLMv",
+					"isInheritable": false,
+					"position": 20
+				}
+			],
+			"attachments": [
+				{
+					"attachmentId": "38rOyGQCN0Fr",
+					"title": "功能演示.mp4",
+					"role": "file",
+					"mime": "video/mp4",
+					"position": 10,
+					"dataFileName": "README_功能演示.mp4"
+				},
+				{
+					"attachmentId": "YwQe2ob7XNkg",
+					"title": "image.png",
+					"role": "image",
+					"mime": "image/png",
+					"position": 10,
+					"dataFileName": "README_image.png"
+				},
+				{
+					"attachmentId": "sFpBKPnB2uBX",
+					"title": "image.png",
+					"role": "image",
+					"mime": "image/jpg",
+					"position": 10,
+					"dataFileName": "1_README_image.png"
+				},
+				{
+					"attachmentId": "dNutog6AHyIS",
+					"title": "image.png",
+					"role": "image",
+					"mime": "image/png",
+					"position": 10,
+					"dataFileName": "2_README_image.png"
+				}
+			],
+			"children": [
+				{
+					"noteId": "2gCa2Imw37Ae",
+					"notePath": [
+						"T6oHLkEf75EY",
+						"2gCa2Imw37Ae"
+					],
+					"isClone": false,
+					"title": "记录",
+					"notePosition": 0,
+					"prefix": null,
+					"isExpanded": true,
+					"type": "text",
+					"mime": "text/html",
+					"format": "markdown",
+					"dataFileName": "记录.md",
+					"noImport": false,
+					"attributes": [],
+					"attachments": []
+				},
+				{
+					"noteId": "lLib570bQLMv",
+					"notePath": [
+						"T6oHLkEf75EY",
+						"lLib570bQLMv"
+					],
+					"isClone": false,
+					"title": "遇到的部分问题",
+					"notePosition": 10,
+					"prefix": null,
+					"isExpanded": true,
+					"type": "text",
+					"mime": "text/html",
+					"format": "markdown",
+					"dirFileName": "遇到的部分问题",
+					"noImport": false,
+					"attributes": [],
+					"attachments": [],
+					"children": [
+						{
+							"noteId": "VUHj2XRWy4Lf",
+							"notePath": [
+								"T6oHLkEf75EY",
+								"lLib570bQLMv",
+								"VUHj2XRWy4Lf"
+							],
+							"isClone": false,
+							"title": "压力测试结果差",
+							"notePosition": 10,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "text",
+							"mime": "text/html",
+							"format": "markdown",
+							"dataFileName": "压力测试结果差.md",
+							"noImport": false,
+							"attributes": [],
+							"attachments": [
+								{
+									"attachmentId": "WyJXBmvo6oM6",
+									"title": "image.png",
+									"role": "image",
+									"mime": "image/png",
+									"position": 10,
+									"dataFileName": "压力测试结果差_image.png"
+								},
+								{
+									"attachmentId": "feWnTMetsELe",
+									"title": "perf.svg",
+									"role": "image",
+									"mime": "image/svg+xml",
+									"position": 10,
+									"dataFileName": "压力测试结果差_perf.svg"
+								}
+							]
+						},
+						{
+							"noteId": "iwg9DocPsrmI",
+							"notePath": [
+								"T6oHLkEf75EY",
+								"lLib570bQLMv",
+								"iwg9DocPsrmI"
+							],
+							"isClone": false,
+							"title": "用户信息有概率显示",
+							"notePosition": 20,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "text",
+							"mime": "text/html",
+							"format": "markdown",
+							"dataFileName": "用户信息有概率显示.md",
+							"noImport": false,
+							"attributes": [],
+							"attachments": [
+								{
+									"attachmentId": "jN2Hs1aG3aWj",
+									"title": "image.png",
+									"role": "image",
+									"mime": "image/jpg",
+									"position": 10,
+									"dataFileName": "用户信息有概率显示_image.png"
+								},
+								{
+									"attachmentId": "iVZm8HjpBxaU",
+									"title": "image.png",
+									"role": "image",
+									"mime": "image/png",
+									"position": 10,
+									"dataFileName": "1_用户信息有概率显示_image.png"
+								},
+								{
+									"attachmentId": "Pfdow7dtIFpM",
+									"title": "image.png",
+									"role": "image",
+									"mime": "image/jpg",
+									"position": 10,
+									"dataFileName": "2_用户信息有概率显示_image.png"
+								},
+								{
+									"attachmentId": "wlwHYh106f7N",
+									"title": "image.png",
+									"role": "image",
+									"mime": "image/jpg",
+									"position": 10,
+									"dataFileName": "3_用户信息有概率显示_image.png"
+								}
+							]
+						},
+						{
+							"noteId": "eemAJIb1GvP0",
+							"notePath": [
+								"T6oHLkEf75EY",
+								"lLib570bQLMv",
+								"eemAJIb1GvP0"
+							],
+							"isClone": false,
+							"title": "图片资源加载异常",
+							"notePosition": 30,
+							"prefix": null,
+							"isExpanded": false,
+							"type": "text",
+							"mime": "text/html",
+							"format": "markdown",
+							"dataFileName": "图片资源加载异常.md",
+							"noImport": false,
+							"attributes": [],
+							"attachments": []
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -56,11 +56,15 @@ void httpCallback(SqlConnectionPool* sqlPoolPtr, const HttpRequest* request, Htt
             string username;
             auto cookieMap = http::resolveContentPair(request->getHeaderValue("Cookie"), ';');
             if(cookieMap.find("sessionid") != cookieMap.end()){
-                char buf[128] = "SELECT username FROM users WHERE id = (SELECT userid FROM sessions WHERE sessionid = '";
-                strcat(buf, cookieMap.at("sessionid").c_str());
-                strcat(buf, "');");
+                // char buf[128] = "SELECT username FROM users WHERE id = (SELECT userid FROM sessions WHERE sessionid = '";
+                // strcat(buf, cookieMap.at("sessionid").c_str());
+                // strcat(buf, "');");
                 SqlConnectionGuard sqlConn(sqlPool);
-                sqlConn.asssertQuery(buf);
+                sqlConn.queryStream() << "SELECT username FROM users WHERE id = (SELECT userid FROM sessions WHERE sessionid = '"
+                    << cookieMap.at("sessionid").c_str()
+                    << "');";
+                sqlConn.asssertQuery();
+                //sqlConn.asssertQuery(buf);
                 auto row = sqlConn.fetchRow();
                 if(row){
                     username = row[0];
@@ -86,11 +90,14 @@ void httpCallback(SqlConnectionPool* sqlPoolPtr, const HttpRequest* request, Htt
             auto cookieMap = http::resolveContentPair(request->getHeaderValue("Cookie"), ';');
             if(cookieMap.find("sessionid") != cookieMap.end()){
                 {
-                    char buf[128] = "DELETE FROM sessions WHERE sessionid = '";
-                    strcat(buf, cookieMap.at("sessionid").c_str());
-                    strcat(buf, "';");
+                    // char buf[128] = "DELETE FROM sessions WHERE sessionid = '";
+                    // strcat(buf, cookieMap.at("sessionid").c_str());
+                    // strcat(buf, "';");
                     SqlConnectionGuard sqlConn(sqlPool);
-                    sqlConn.asssertQuery(buf);//如果没有搜索到会报错吗？
+                    sqlConn.queryStream() << "DELETE FROM sessions WHERE sessionid = '" 
+                                        << cookieMap.at("sessionid").c_str()
+                                        << "';";
+                    sqlConn.asssertQuery();//如果没有搜索到会报错吗？
                 }
             }
             //重定向到开始页面
@@ -121,56 +128,50 @@ void httpCallback(SqlConnectionPool* sqlPoolPtr, const HttpRequest* request, Htt
             //如果已经登陆，应该给出一个错误信息：先注销再登陆？还是直接把登陆界面重定向到desktop？选择后者。
             SqlConnectionGuard sqlConn(sqlPool);
             if(pairs.at("action") == "login"){
-                char buf[256] = "SELECT id, username, password FROM users WHERE username='";
-                strcat(buf, pairs.at("username").c_str());
-                strcat(buf, "';");
-                sqlConn.asssertQuery(buf);
+                sqlConn.queryStream() << "SELECT id, username, password FROM users WHERE username='"
+                                    << pairs.at("username").c_str()
+                                    << "';";
+                sqlConn.asssertQuery();
                 auto outcome = sqlConn.fetchRow();
                 if(outcome && pairs.at("password") == outcome[2]){//登陆成功。首先删除
                     auto sessionid = generateSessionId();
-                    char idBuf[64];
-                    detail::formatInteger(idBuf, sessionid);
+                    // char idBuf[64];
+                    // detail::formatInteger(idBuf, sessionid);
 
                     //让之前登陆的用户退出。
-                    strcpy(buf, "DELETE FROM sessions WHERE userid = '");
-                    strcat(buf, outcome[0]);
-                    strcat(buf, "';");
-                    sqlConn.asssertQuery(buf);
+                    sqlConn.queryStream() << "DELETE FROM sessions WHERE userid = '" << outcome[0] << "';";
+                    sqlConn.asssertQuery();
 
                     //插入新的会话信息。
-                    strcpy(buf, "INSERT INTO sessions (userid, sessionid) VALUES (");
-                    strcat(buf, outcome[0]);
-                    strcat(buf, ", ");
-                    strcat(buf, idBuf);
-                    strcat(buf, ");");
-                    sqlConn.asssertQuery(buf);
+                    sqlConn.queryStream() << "INSERT INTO sessions (userid, sessionid) VALUES ("
+                                        << outcome[0] << "," << sessionid << ");";
+                    sqlConn.asssertQuery();
 
                     response->setStatusCode(302);
                     response->setHeaderValue("Location", "/");
-                    response->setHeaderValue("Set-Cookie", "sessionid=" + string(idBuf) + "");
+                    response->setHeaderValue("Set-Cookie", "sessionid=" + to_string(sessionid) + "");
                 }else{//登陆失败，用户名不存在或者密码不正确。
                     response->setStatusCode(200);
                     string filePath = rootDir + string("/error/loginFailed.html");
                     response->setBodyWithFile(filePath);
                 }
             }else if(pairs.at("action") == "signup"){
-                char buf[256] = "SELECT username FROM users WHERE username='";
-                strcat(buf, pairs.at("username").c_str());
-                strcat(buf, "';");
-                int ret = sqlConn.query(buf);
-                assert(ret == 0);
+                // char buf[256] = "SELECT username FROM users WHERE username='";
+                // strcat(buf, pairs.at("username").c_str());
+                // strcat(buf, "';");
+                sqlConn.queryStream() << "SELECT username FROM users WHERE username='"
+                                    << pairs.at("username").c_str() << ";";
+                sqlConn.asssertQuery();
                 auto outcome = sqlConn.fetchRow();
                 if(outcome){//注册失败
                     response->setStatusCode(302);
                     response->setHeaderValue("Location", "/error/usernameExists.html");
                 }else{//注册成功。实际上插入sql时还是有可能因为竞争而失败，这时应该重定向到错误。只有插入成功后才设定请求。
                     //数据库添加注册信息
-                    char buf[256] = "INSERT INTO users (username, password) VALUES (";
-                    strcat(buf, pairs.at("username").c_str());
-                    strcat(buf, ", ");
-                    strcat(buf, pairs.at("password").c_str());
-                    strcat(buf, ");");
-                    int ret = sqlConn.query(buf);
+                    sqlConn.queryStream() << "INSERT INTO users (username, password) VALUES ("
+                                        << pairs.at("username").c_str()
+                                        << "," << pairs.at("password").c_str() << ");";
+                    int ret = sqlConn.query();
                     if(ret){
                         response->setStatusCode(302);
                         response->setHeaderValue("Location", "/error/usernameExists.html");
@@ -179,7 +180,6 @@ void httpCallback(SqlConnectionPool* sqlPoolPtr, const HttpRequest* request, Htt
                         string filePath = rootDir + string("/registeredsuccessfully.html");
                         response->setBodyWithFile(filePath);
                     }
-                    
                 }
             }
         }else if(path == "/createCharacter.cgi"){
@@ -201,8 +201,8 @@ int main(int argc, char* argv[]){
     // char* httpServerAddress = argv[1];
     // int httpServerPort = atoi(argv[2]);
     // int threadNum = atoi(argv[3]);
-
-    SqlConnectionPool sqlPool(threadNum, "127.0.0.1", sqlUser.c_str(), password.c_str(), databaseName.c_str(), sqlPort);//初始化sql连接池s
+    SqlUser user = {"127.0.0.1", sqlUser.c_str(), password.c_str()};
+    SqlConnectionPool sqlPool(threadNum, user, databaseName.c_str(), sqlPort);//初始化sql连接池s
     {//初始化要用到的数据表。
         SqlConnectionGuard sqlConn(sqlPool);
         sqlConn.asssertQuery( \

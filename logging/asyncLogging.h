@@ -1,7 +1,7 @@
 #ifndef WEBSERVER_LOGGING_ASYNCLOGGING_H
 #define WEBSERVER_LOGGING_ASYNCLOGGING_H
 #include "logFile.h"
-#include "logStream.h"
+#include "../common/strStream.h"
 #include "../process/threadHandler.h"
 #include <queue>
 #include <memory>
@@ -21,7 +21,7 @@ private:
 void loggingThreadFunc();
 LogFile output_;
 ThreadHandler thread_;
-typedef detail::LogBuffer<4000*1000> Buffer;
+typedef detail::StreamBuffer<4000*1000> Buffer;
 vector<unique_ptr<Buffer>> buffers_;
 unique_ptr<Buffer> currentBuffer_;
 unique_ptr<Buffer> nextBuffer_;

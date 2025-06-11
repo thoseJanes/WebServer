@@ -2,16 +2,17 @@
 #define WEBSERVER_MYSQL_SQLCONNECTIONGUARD_H
 
 #include "sqlConnectionPool.h"
+#include "../common/strStream.h"
 
 namespace webserver{
 
-
+typedef StrStream<512> QueryStream;
 class SqlConnectionGuard:Noncopyable{//这个类可以在SqlConnectionPool内部创建?或者声明为SqlConnectionPool的友元。
 //应当单线程使用。要传入loop吗？但是loop无法获取结果。
 //所以应当在栈上使用。
 public:
-    SqlConnectionGuard(SqlConnectionPool& sqlPool, bool blockingGet = true):sqlPool_(&sqlPool){
-        connection_ = sqlPool_->getConnection(blockingGet);
+    SqlConnectionGuard(SqlConnectionPool& sqlPool, bool blockingGet = true, int blockingMs = 0):sqlPool_(&sqlPool){
+        connection_ = sqlPool_->getConnection(blockingGet, blockingMs);
     }
     ~SqlConnectionGuard(){
         if(valid()){
@@ -23,6 +24,33 @@ public:
     }
     bool valid(){
         return connection_!=NULL;
+    }
+
+    QueryStream& queryStream(){
+        stream_.reset();
+        return stream_;
+    }
+
+    int query(){
+        stream_ << '\0';
+        if(stream_.isTruncated()){
+            LOG_FATAL << "SqlConnectionGuard::query - Query failed with stream buffer truncated. Make sure length of query sentence is shorter than 500 bytes.";
+            //这不是mysql本身的错误。应该怎么办呢？
+        }else{
+            int ret = mysql_query(connection_, stream_.buffer().data());//执行新查询时，会隐式释放一个结果集。
+            if(ret){
+                LOG_ERROR << "Failed in mysql query. error: " << mysql_error(connection_);
+            }
+            result_ = NULL;
+            return ret;//由上层来处理。
+        }
+    }
+
+    void asssertQuery(){
+        int ret = query();//执行新查询时，会隐式释放一个结果集。
+        if(ret){
+            abort();
+        }
     }
 
     int query(const char* sentence){
@@ -59,8 +87,6 @@ public:
         return mysql_num_rows(result_);
     }
 
-
-
     MYSQL_ROW fetchRow(){
         if(!result_){
             result_ = mysql_store_result(connection_);
@@ -75,6 +101,7 @@ public:
 private:
     MYSQL* connection_;
     MYSQL_RES* result_;
+    QueryStream stream_;
     SqlConnectionPool* sqlPool_;
 };
 

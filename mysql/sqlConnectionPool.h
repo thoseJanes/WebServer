@@ -54,14 +54,20 @@ void closeMysqlConnection(MYSQL* conn){
 
 }
 
+struct SqlUser{
+    string host;
+    string name;
+    string pwd;
+};
+
 class SqlConnectionPool:Noncopyable{
 public:
-    SqlConnectionPool(int connNum, const char* host, const char* user, const char* pwd, const char* db, unsigned int port)
+    SqlConnectionPool(int connNum, SqlUser user, const char* db, unsigned int port)
     :   mutex_(),
         hasConn_(mutex_),
-        host_(host),
-        user_(user),
-        pwd_(pwd),
+        host_(user.host.c_str()),
+        user_(user.name.c_str()),
+        pwd_(user.pwd.c_str()),
         db_(db),
         port_(port),
         connNum_(0),
@@ -93,14 +99,23 @@ public:
         createNewConnections(connNum, true);
     }
 
-    MYSQL* getConnection(bool blocking){
+    //如果开启了AutoCreateNewConnections并且设置了blockingMs，则会在等待时间超时后自动创建新连接。
+    MYSQL* getConnection(bool blocking, int blockingMs = NULL){
         if(blocking){
             MutexLockGuard lock(mutex_);
             while(connections_.size() == 0){
-                if(connNum_.load() < autoCreateMaxNum_){
-                    createNewConnections(1, false);
+                LOG_DEBUG << "Waiting for mysql connection.";
+                assert(blockingMs >= 0);
+                if(blockingMs>0){
+                    bool timeout = hasConn_.waitMilliseconds(blockingMs);
+                    if(timeout){
+                        if(connNum_.load() < autoCreateMaxNum_){
+                            createNewConnections(1, false);
+                        }else{
+                            LOG_WARN << "SqlConnectionPool - number of connections reaches max";
+                        }
+                    }
                 }else{
-                    LOG_DEBUG << "Waiting for mysql connection.";
                     hasConn_.wait();
                 }
             }
@@ -160,7 +175,7 @@ private:
 
         MutexLockGuard lock(mutex_);
         //connNum_ += connNum;
-        //LOG_DEBUG << "created " << newConnections.size() << " connections";
+        LOG_DEBUG << "created " << newConnections.size() << " new connections";
         //否，虽然知道load不会被fetch_add撕裂，但不知道是否会被普通+操作撕裂。
         connNum_.fetch_add(connNum);
         connections_.reserve(connNum_);

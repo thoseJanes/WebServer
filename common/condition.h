@@ -27,9 +27,18 @@ public:
     }
 
     bool waitSeconds(int seconds){
+        // timespec interval;
+        // interval.tv_sec = seconds;
+        // interval.tv_nsec = 0;
+        // BlockGuard block(mutex_);
+        // return ETIMEDOUT == pthread_cond_timedwait(&cond_, mutex_.pthreadMutex(), &interval);
+        return waitMilliseconds(seconds*1000);
+    }
+
+    bool waitMilliseconds(int ms){
         timespec interval;
-        interval.tv_sec = seconds;
-        interval.tv_nsec = 0;
+        interval.tv_sec = ms/1000;
+        interval.tv_nsec = ms%1000*1000;
         BlockGuard block(mutex_);
         return ETIMEDOUT == pthread_cond_timedwait(&cond_, mutex_.pthreadMutex(), &interval);
     }

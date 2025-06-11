@@ -2,14 +2,14 @@
 #define WEBSERVER_LOGGING_LOGGER_H
 
 #include "../common/patterns.h"
-#include "logStream.h"
+#include "../common/strStream.h"
 #include "../common/fileUtil.h"
 
 
 namespace webserver{
 
 
-
+typedef StrStream<4000> LogStream;
 
 
 inline LogStream& operator<<(LogStream& stream, const detail::FileSource file){

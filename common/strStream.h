@@ -1,5 +1,5 @@
-#ifndef WEBSERVER_LOGGING_LOGSTREAM_H
-#define WEBSERVER_LOGGING_LOGSTREAM_H
+#ifndef WEBSERVER_LOGGING_StrStream_H
+#define WEBSERVER_LOGGING_StrStream_H
 //#include <memory>
 #include <string.h>
 #include "../common/patterns.h"
@@ -9,18 +9,14 @@
 
 
 
-
-
-
-
 namespace webserver{
 namespace detail{
 
 
 template<int SIZE>
-class LogBuffer: public Noncopyable{
+class StreamBuffer: public Noncopyable{
 public:
-    LogBuffer():cur_(data_){}
+    StreamBuffer():cur_(data_){}
     void append(const char* buf, int len){
         if(availBytes() >= len){
             memcpy(current(), buf, len);
@@ -51,14 +47,15 @@ public:
 
     const char* data() const {return data_;}
     void reset(){cur_ = data_;}
+    bool isTruncated(){return SIZE - writtenBytes() < 0;}
 private:
     int writableBytes(){
         return SIZE - writtenBytes() +  truncatedLen;
     }
-    static constexpr char truncatedFlag[] = "...(truncated)\n";
-    static constexpr int truncatedLen = sizeof(truncatedFlag) - 1;
+    static constexpr char truncatedFlag[] = "...(truncated)\n";//FIXME：是否算作截断不应该由底层决定，应该给上层决定并处理！！！待修复。
+    static constexpr int truncatedLen = sizeof(truncatedFlag);
     char* cur_;
-    char data_[SIZE + truncatedLen + 1];//留一个位置用于snprintf是否超出长度判断。
+    char data_[SIZE + truncatedLen + 1];//FIXME：是否算作截断不应该由底层决定//留一个位置用于snprintf是否超出长度判断。
 
 };
 
@@ -73,12 +70,13 @@ public:
 };
 
 using namespace std;
-class LogStream: public Noncopyable{
-    typedef detail::LogBuffer<4000> Buffer;
-    typedef LogStream self;
+template<int SIZE>
+class StrStream: public Noncopyable{
+    typedef detail::StreamBuffer<SIZE> Buffer;
+    typedef StrStream self;
 public:
-    LogStream() = default;
-    ~LogStream() = default;
+    StrStream() = default;
+    ~StrStream() = default;
     self& operator<<(short);
     self& operator<<(int);
     self& operator<<(long);
@@ -149,7 +147,12 @@ public:
     static int getPrecision(){
         return precision_;
     }
-
+    bool isTruncated(){
+        return buf_.isTruncated();
+    }
+    void reset(){
+        buf_.reset();
+    }
 private:
     template<typename T, int DIGIT = 10>
     void formatInteger(T i){

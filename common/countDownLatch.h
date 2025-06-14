@@ -33,7 +33,7 @@ public:
     // }
 private:
     MutexLock mutex_;
-    Condition condition_;
+    Condition condition_ GUARDED_BY(mutex_);
     pthread_cond_t cond_;
     int counter_;
 };

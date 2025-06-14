@@ -99,10 +99,11 @@ class AdaptiveFileReader{
 public:
     AdaptiveFileReader(StringArg path, size_t minBufferSize = 64*1024-1)
     :   fd_(open(path.c_str(), O_CLOEXEC|O_RDONLY)), 
-        mayHaveMore_(true),
-        bufInit_(false),
+        bufSize_(0),
         len_(0),
-        bufSize_(0)
+        mayHaveMore_(true),
+        bufInit_(false)
+        
     {
         assert(fd_ >= 0);
         

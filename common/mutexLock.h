@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "patterns.h"
 #include "../process/currentThread.h"
+#include "threadSafetyAnalysis.h"
 
 namespace webserver{
 
@@ -15,14 +16,14 @@ namespace webserver{
     (void)errnum; \
 })
 
-class MutexLock:Noncopyable{
+class CAPABILITY("mutex") MutexLock:Noncopyable{
 public:
     MutexLock(){MCHECK(pthread_mutex_init(&mutex_, NULL));}
-    void lock(){
+    void lock() ACQUIRE() {
         MCHECK(pthread_mutex_lock(&mutex_));
         assignHolder();
     }
-    void unlock(){
+    void unlock() RELEASE() {
         unassignHolder();
         MCHECK(pthread_mutex_unlock(&mutex_));
     }
@@ -63,12 +64,12 @@ private:
 };
 
 
-class MutexLockGuard:Noncopyable{
+class SCOPED_CAPABILITY MutexLockGuard:Noncopyable{
 public:
-    MutexLockGuard(MutexLock& mutex):mutex_(mutex){
+    MutexLockGuard(MutexLock& mutex) ACQUIRE(mutex) :mutex_(mutex){//这里必须显式地获取mutex，而非mutex_
         mutex_.lock();
     }
-    ~MutexLockGuard(){
+    ~MutexLockGuard() RELEASE() {
         mutex_.unlock();
     }
 private:

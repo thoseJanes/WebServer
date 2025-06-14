@@ -61,9 +61,8 @@ namespace detail{
     //获取某个具体整数的表示长度
     template<typename T, int DIGIT>
     size_t integerLength(T i){
-        char* buf = new char[maxFormatSize<T, DIGIT>()];
+        char buf[maxFormatSize<T, DIGIT>()];
         auto len = formatInteger<T, DIGIT>(buf, i);
-        delete buf;
         return len;
     }
 

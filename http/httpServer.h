@@ -106,7 +106,7 @@ private:
                 if(paser->getState() == HttpParser::sGotAll){//一个请求解析完成
                     HttpResponse response;
                     const HttpRequest* request = paser->getRequest();
-                    httpCallback_(request, &response, httpContext->context);
+                    httpCallback_(request, &response, httpContext->context);//是不是应该把mysql设置成非阻塞的？如果mysql查询事件完成就保存结果、返还连接并且
                     conn->send(response.toString());
 
                     bool close = request->getHeaderValue("Connection") == "Close" || 

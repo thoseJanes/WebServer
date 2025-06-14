@@ -40,7 +40,7 @@ namespace http{
 
     //const map<string, string> suffixToContentType;
     
-    string getContentType(string& dir);
+    string getContentType(string_view dir);
 
     string_view trim(const char* start, const char* end);
 
@@ -91,7 +91,7 @@ public:
     typedef http::Version Version;
     typedef http::Method Method;
     typedef http::BodyType BodyType;
-    HttpRequest(TimeStamp time):reqTime_(time), version_(http::vUNKNOW), method_(http::mUNKNOW){}
+    HttpRequest(TimeStamp time):version_(http::vUNKNOW), method_(http::mUNKNOW), reqTime_(time){}
     ~HttpRequest(){}
 
     string getHeaderValue(string& item) const {
@@ -220,13 +220,13 @@ public:
     }
 
 private:
-    
+    Version version_;
     Method method_;
     string path_;
     string message_;
     
     TimeStamp reqTime_;
-    Version version_;
+    
     map<string, string> header_;
     
     string body_;

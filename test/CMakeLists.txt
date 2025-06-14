@@ -7,6 +7,7 @@ project(test)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 find_package(MySQL REQUIRED)
 
+find_package(hiredis REQUIRED)
 # 方式1：直接指定路径（推荐）
 find_library(WEBSERVER_BASE_LIB webserver_base PATHS /usr/local/lib)
 
@@ -36,4 +37,8 @@ target_link_libraries(mysqlTest ${MYSQL_LIB})
 add_executable(httpServerTest httpServerTest.cpp)
 target_link_libraries(httpServerTest ${WEBSERVER_BASE_LIB})
 target_link_libraries(httpServerTest ${MYSQL_LIB})
+
+add_executable(redisTest redisTest.cpp)
+target_link_libraries(redisTest ${WEBSERVER_BASE_LIB})
+target_link_libraries(redisTest hiredis::hiredis)
 

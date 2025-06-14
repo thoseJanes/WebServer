@@ -84,7 +84,7 @@ const map<string, string> suffixToContentType = {
 }
 
 
-string http::getContentType(string& dir){
+string http::getContentType(string_view dir){
     auto dotPos = dir.rfind(".");
     if(dotPos != std::string::npos){
         char buf[16];

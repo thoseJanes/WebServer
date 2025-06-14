@@ -44,7 +44,6 @@ public:
         formatWithoutBody(out);
         return out;
     }
-    
     string toString(){
         string out;
 
@@ -90,7 +89,6 @@ public:
         }
     }
 
-
     string getHeaderValue(string& item) const {
         if(header_.find(item) == header_.end()){
             return "";
@@ -104,7 +102,6 @@ public:
         return body_;
     }
 
-
     void setHeaderValue(string item, string value){
         if(header_.find(item) == header_.end()){
             header_.insert({item, value});
@@ -116,7 +113,6 @@ public:
         version_ = version;
     }
     
-
     void setBody(string_view str){
         if(!body_.empty()){
             LOG_ERROR << "Failed in setBody. Body has been set data, please clear body content first.";
@@ -125,13 +121,13 @@ public:
         }
     }
     void appendBody(string_view str){
-        if(contentType_ = kPath){
+        if(kPath == contentType_){
             LOG_ERROR << "Failed in appendBody. Body has been set as file, please clear body content first.";
         }else{
             body_.append(str);
         }
     }
-    void setBodyWithFile(string path){
+    void setBodyWithFile(string_view path){
         if(body_.empty()){
             contentType_ = kPath;
             body_ = path;
@@ -154,7 +150,6 @@ public:
         contentType_ = kData;
     }
     
-
     void setStatusCode(int statusCode){
         statusCode_ = statusCode;
     }
@@ -170,11 +165,14 @@ public:
         return false;
     }
 
-    
+    void redirectTo(string path){
+        this->setStatusCode(302);
+        this->setHeaderValue("Location", path);
+    }
 private:
     void formatWithoutBody(string& out){
         char buf[8];
-        int len = snprintf(buf, sizeof(buf), "%d", statusCode_);
+        snprintf(buf, sizeof(buf), "%d", statusCode_);
 
         
         out.append(http::versionToString(version_));
@@ -192,9 +190,9 @@ private:
         }
         out += "\r\n";
     }
-    
-    int statusCode_;
+
     Version version_;
+    int statusCode_;
     map<string, string> header_;
     string body_;
 

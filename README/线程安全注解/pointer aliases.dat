@@ -1,0 +1,20 @@
+//The analysis currently does not track pointer aliases. Thus, there can be false positives if two pointers both point to the same mutex.
+
+class MutexUnlocker {
+  Mutex* m_;
+
+public:
+  MutexUnlocker(Mutex* m) RELEASE(m) : m_(m)  { m_->Unlock(); }
+  ~MutexUnlocker() ACQUIRE(m_) { m_->Lock(); }
+};
+
+Mutex mutex;
+void test() REQUIRES(mutex) {
+  {
+    MutexUnlocker munl(&mutex);  // unlocks mutex
+    doSomeIO();
+  }                              // Warning: locks munl.m_
+}
+
+//The MutexUnlocker class is intended to be the dual of the MutexLocker class, defined in mutex.h. However, it doesn’t work because the analysis doesn’t know that munl.mu == mutex. 
+//The SCOPED_CAPABILITY attribute handles aliasing for MutexLocker, but does so only for that particular pattern. SCOPED_CAPABILITY属性可以处理锁的别名，但是只在特定模式下处理。

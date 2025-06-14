@@ -1,0 +1,22 @@
+Mutex mu;
+int a GUARDED_BY(mu);
+
+void foo() {
+  bool success = mu.TryLock();
+  a = 0;         // Warning, mu is not locked. 只有在trylock的第一个分支后才会认为锁被获取
+  if (success) {
+    a = 0;       // Ok. 在这里，trylock的第一个分支后，认为锁被获取
+    mu.Unlock();
+  } else {
+    a = 0;       // Warning, mu is not locked.因为获取失败，认为锁未被获取
+  }
+    // 外部仍未被获取。
+}
+
+// 类似的情况。因为线程安全注解是静态的。不能作运行时判断
+void foo() {
+  bool b = needsToLock();
+  if (b) mu.Lock();
+  ...  // Warning!  Mutex 'mu' is not held on every path through here.
+  if (b) mu.Unlock();
+}

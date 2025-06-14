@@ -1,0 +1,18 @@
+template<class T>
+class AutoCleanup {
+  T* object;
+  void (T::*mp)();
+
+public:
+  AutoCleanup(T* obj, void (T::*imp)()) : object(obj), mp(imp) { }
+  ~AutoCleanup() { (object->*mp)(); }
+};
+
+Mutex mu;
+void foo() {
+  mu.Lock();
+  AutoCleanup<Mutex>(&mu, &Mutex::Unlock);
+  // ...
+}  // Warning, mu is not unlocked.
+
+//In this case, the destructor of Autocleanup calls mu.Unlock(), so the warning is bogus. However, thread safety analysis cannot see the unlock, because it does not attempt to inline the destructor. Moreover, there is no way to annotate the destructor, because the destructor is calling a function that is not statically known. This pattern is simply not supported.

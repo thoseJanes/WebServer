@@ -1,0 +1,27 @@
+template <class T>
+class CAPABILITY("mutex") Container {
+private:
+  Mutex mu;
+  T* data;
+
+public:
+  // Hide mu from public interface.
+  void Lock()   ACQUIRE() { mu.Lock(); }
+  void Unlock() RELEASE() { mu.Unlock(); }
+
+  T& getElem(int i) { return data[i]; }
+};
+
+class SCOPED_CAPABILITY ContainerGuard {
+private:
+  Container c_;
+public:
+  ContainerGuard(c) ACQUIRE(c) :c_(c){c.Lock();}
+  ~ContainerGuard() RELEASE() {c.Unlock();}
+};
+
+void test() {
+  Container<int> c;
+  ContainerGuard(c);
+  int i = c.getElem(0);
+}

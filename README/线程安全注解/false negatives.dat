@@ -1,0 +1,60 @@
+//The GUARDED_BY and REQUIRES attributes prevent race conditions, by ensuring that a capability is held before reading or writing to guarded data
+//EXCLUDES attribute prevents deadlock, by making sure that a mutex is not held.
+
+//EXCLUDES is an optional attribute, and does not provide the same safety guarantee as REQUIRES. In particular:
+//获取某个能力的函数并不一定需要排除它。A function which acquires a capability does not have to exclude it.
+//一个调用排除了某个能力的函数，并不传递性地排除这个能力。A function which calls a function that excludes a capability does not have transitively（传递性地） exclude that capability.
+
+//As a result, EXCLUDES can easily produce false negatives（伪阴性：指进行实用测试之后，测试结果有机会不呈现真正的状况。）:
+
+class Foo {
+  Mutex mu;
+
+  void foo() {
+    mu.Lock();
+    bar();           // No warning.
+    baz();           // No warning.
+    mu.Unlock();
+  }
+
+  void bar() {       // No warning.  (Should have EXCLUDES(mu)).
+    mu.Lock();
+    // ...
+    mu.Unlock();
+  }
+
+  void baz() {
+    bif();           // No warning.  (Should have EXCLUDES(mu)).
+  }
+
+  void bif() EXCLUDES(mu);
+};
+
+
+
+//Negative requirements are an alternative EXCLUDES that provide a stronger safety guarantee. A negative requirement uses the REQUIRES attribute, in conjunction with the ! operator, to indicate that a capability should not be held.
+//For example, using REQUIRES(!mu) instead of EXCLUDES(mu) will produce the appropriate warnings:
+
+class FooNeg {
+  Mutex mu;
+
+  void foo() REQUIRES(!mu) {   // foo() now requires !mu.
+    mu.Lock();
+    bar();
+    baz();
+    mu.Unlock();
+  }
+
+  void bar() {
+    mu.Lock();       // WARNING!  Missing REQUIRES(!mu).
+    // ...
+    mu.Unlock();
+  }
+
+  void baz() {
+    bif();           // WARNING!  Missing REQUIRES(!mu).
+  }
+
+  void bif() REQUIRES(!mu);
+};
+//Negative requirements are an experimental feature which is off by default, because it will produce many warnings in existing code. It can be enabled by passing -Wthread-safety-negative.

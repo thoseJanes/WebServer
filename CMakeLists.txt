@@ -39,11 +39,13 @@ find_package(MySQL REQUIRED)
 target_include_directories(webserver_base PRIVATE ${MYSQL_INCLUDE_DIR})
 target_link_libraries(webserver_base ${MYSQL_LIB})
 
+set(HIREDIS_INCLUDE_DIR /usr/local/include/hiredis/include)
+set(HIREDIS_LIBRARY /usr/local/lib/libhiredis.so)
 
 add_executable(testProgram ./test/httpServerTest.cpp)
 target_link_libraries(testProgram webserver_base)
 target_link_libraries(testProgram ${MYSQL_LIB})
-
+target_link_libraries(testProgram ${HIREDIS_LIBRARY})
 
 # 以下操作会将webserver安装到/usr/local/include目录下。
 

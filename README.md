@@ -9,7 +9,7 @@ C++实现的高性能网络库及http服务器
 **Method**
 ----------
 
-http服务器基于网络库，大部分自主编写；sql连接池、http测试及用到的网页资源皆自主编写；网络库部分主要参考muduo库结构，方法如下：
+http服务器基于网络库，大部分自主编写；sql连接池、http测试及用到的网页资源皆自主编写；网络库部分主要参考muduo库结构，方法如下。
 
 在编写中有时会阅读源码和笔记，但是阅读和编写至少隔一天，因为印象记忆可能阻碍理解：
 
@@ -38,8 +38,8 @@ http服务器基于网络库，大部分自主编写；sql连接池、http测试
 *   缓存进程pid、线程tid等参数，节省系统调用，并通过分支预测优化性能。
 *   采用仅关闭写端的方式断开连接，防止消息丢失。
 *   采用智能指针管理对象生命周期，通过bind回调传入智能指针延长相关对象生命周期，防止意外析构。
-*   sql连接、互斥锁等设施采用RAII的封装方式，简化API调用。
-*   mysql连接池可动态扩容，防止连接不足时长时间等待。
+*   sql连接、redis连接、互斥锁等设施采用RAII的封装方式，简化API调用。
+*   连接池可动态扩容，防止连接不足时长时间等待。
 *   通过context提供可存储在连接中的上下文信息。
 *   http请求解析器通过状态机实现了请求体的不同传输方式解析（普通传输、分块传输、持续传输直到连接关闭）。
 *   http测试部分实现了注册、登陆、注销、用户信息动态更新等功能，能够正常加载多媒体资源。
@@ -48,16 +48,14 @@ http服务器基于网络库，大部分自主编写；sql连接池、http测试
 ---------------
 
 http功能演示：
-
 [功能演示.mp4](README/README_功能演示.mp4) 
 
-压力测试结果：
-
+压力测试：
 ![](README/README_image.png)
 
 🔥火焰图：
-
-[火焰图.svg](README/火焰图.svg)
+<img src="https://raw.githubusercontent.com/thoseJanes/WebServer/7f1bdec68ae5a6f0cde3f24339e91e0e6b0a1ee7/README/%E7%81%AB%E7%84%B0%E5%9B%BE.svg?sanitize=true" width="400px" height="400px">
+<!-- [火焰图.svg](README/火焰图.svg) -->
 
 **Environment**
 ---------------
@@ -65,8 +63,9 @@ http功能演示：
 在Ubuntu24.04 LTS上编写  
 CMake版本3.10  
 g++版本13.3.0  
-mysql版本8.0.42  
-c++17（主要用到了17的string\_view）
+mysql版本8.0.42
+redis版本7.0.15
+c++17
 
 **Usage**
 ---------
@@ -89,7 +88,6 @@ GRANT ALL PRIVILEGES ON test_http_database.* TO 'test_http'@'localhost';
 编写的大致顺序是自底层向上层的。
 
 基础部分包括：common/    process/    time/    logging/，顺序：
-
 patterns、format  
 logStream
 
@@ -103,7 +101,6 @@ threadHandler、threadPool
 asyncLogging
 
 网络部分包括：event/    poller/    net/    http/，顺序：
-
 socket、inetAddress  
 timer、timerQueue、channel、poller  
 eventLoop、epollPoller  
@@ -112,29 +109,29 @@ acceptor、connector
 connBuffer、tcpConnection、tcpServer、tcpClient  
 httpRequest、httpResponse、httpParser、httpServer
 
-最后是mysql连接池和http测试：
-
-sqlConnectionPool、sqlConnectionGuard  
+最后是mysql、redis连接池和http测试：
+connectionPool
+sqlConnectionPool、sqlConnectionGuard
+redisConnectionPool、redisConnectionGuard
 http测试在test/httpServerTest.cpp中，相关测试资源在test/testResource/目录下。
 
 **Further study**
 -----------------
 
 编写时对以下视角关注较少，有时间时可以发掘一下：
-
-——提供的接口有没有什么原则？完备性？  
-——代码风格？函数命名？注释方式？（形式化一下？）  
-——保证对象生命周期的方法？哪些对象需要保证生命周期？  
-——线程安全注解？是什么以及如何使用？  
-——CMakeList的测试单元？规范一下测试方式？  
-——LOG风格？LOG分级该如何选择？如何让LOG看起来更清晰？定制一种特定LOG格式？善用各种符号？  
-——试着使用Clang编译能够更好保证安全性？  
+——提供的接口有没有什么原则？完备性？
+——代码风格？函数命名？注释方式？（形式化一下？）
+——保证对象生命周期的方法？哪些对象需要保证生命周期？
+——线程安全注解？是什么以及如何使用？ -> [线程安全注解](README/线程安全注解.md)
+——CMakeList的测试单元？规范一下测试方式？ -> 无法应对复杂情况
+——LOG风格？LOG分级该如何选择？如何让LOG看起来更清晰？定制一种特定LOG格式？善用各种符号？ -> [LOG风格](README/Log风格.md)
+——试着使用Clang编译能够更好保证安全性？ -> 完成
 ——记录状态的成员变量是如何简化多线程并发编程的？如何进行形式化的分析？
 
 有一些尚可扩展的内容：  
-——tcpInfo信息的获取和打印  
-——时区文件读取及时区设置  
-——poll的轮询方式  
-——异步io，io\_uring  
-——不同的触发方式，边缘触发  
-——可以用redis来存储用户登陆的会话信息
+——tcpInfo信息的获取和打印
+——时区文件读取及时区设置
+——poll的轮询方式
+——异步io，io\_uring
+——不同的触发方式，边缘触发
+——可以用redis来存储用户登陆的会话信息 -> 完成

@@ -2,16 +2,21 @@
 #define WEBSERVER_MYSQL_SQLCONNECTIONGUARD_H
 
 #include "sqlConnectionPool.h"
+#include <mysql/mysql.h>
+#include <mysql_connection.h>
 #include "../common/strStream.h"
+#include "../common/connectionPool.h"
 
 namespace webserver{
+
+typedef ConnectionPool<MYSQL, mysql::SqlServer> SqlConnectionPool;
 
 typedef StrStream<512> QueryStream;
 class SqlConnectionGuard:Noncopyable{//这个类可以在SqlConnectionPool内部创建?或者声明为SqlConnectionPool的友元。
 //应当单线程使用。要传入loop吗？但是loop无法获取结果。
 //所以应当在栈上使用。
 public:
-    SqlConnectionGuard(SqlConnectionPool& sqlPool, bool blockingGet = true, int blockingMs = 0):sqlPool_(&sqlPool){
+    SqlConnectionGuard(SqlConnectionPool* sqlPool, bool blockingGet = true, int blockingMs = 0):sqlPool_(sqlPool), result_(NULL){
         connection_ = sqlPool_->getConnection(blockingGet, blockingMs);
     }
     ~SqlConnectionGuard(){
@@ -35,6 +40,7 @@ public:
         stream_ << '\0';
         if(stream_.isTruncated()){
             LOG_FATAL << "SqlConnectionGuard::query - Query failed with stream buffer truncated. Make sure length of query sentence is shorter than 500 bytes.";
+            return 0;
             //这不是mysql本身的错误。应该怎么办呢？
         }else{
             int ret = mysql_query(connection_, stream_.buffer().data());//执行新查询时，会隐式释放一个结果集。

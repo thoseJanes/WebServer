@@ -1,16 +1,18 @@
 #ifndef WEBSERVER_THREAD_THREADPOOL_H
 #define WEBSERVER_THREAD_THREADPOOL_H
-#include <queue>
-#include <functional>
 #include "threadHandler.h"
-#include "../logging/logger.h"
+
+#include <deque>
+#include <functional>
 #include <memory>
+
+#include "../logging/logger.h"
 namespace webserver{
 
 
 //1、start和stop和线程池构造在同一线程进行。否。stop也不一定和构造在同一线程（析构函数是在什么线程进行的？）。严格来说并不是线程安全，但start和stop一般时间间隔很长不会相互影响？？？
 //2、stop后不可再start
-class ThreadPool{
+class ThreadPool:Noncopyable{
 public:
     typedef std::function<void()> Task;
     ThreadPool(int threadNum, int maxTasks):mutex_(), notEmpty_(mutex_), notFull_(mutex_), running_(false),
@@ -21,7 +23,7 @@ public:
         assert(threads_.size() == 0);//防止线程池再次运行。
         running_ = true;
         for(int i=0;i<threadNum_;i++){
-            threads_.emplace_back(new ThreadHandler(std::bind(threadFunc, this)));//是否可以只bind一次然后传参？
+            threads_.emplace_back(new ThreadHandler(std::bind(&ThreadPool::threadFunc, this)));//是否可以只bind一次然后传参？
             threads_[i]->start();
         }
     }
@@ -37,7 +39,7 @@ public:
                 tasks_.push_back(std::move(task));
                 notEmpty_.notify();
             }else{
-                LOG_ERR << "threadPool::run() discard a task when running is "<< running_;
+                LOG_ERROR << "threadPool::run() discard a task when running is "<< running_;
             }
         }
     }

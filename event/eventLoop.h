@@ -16,7 +16,7 @@ namespace webserver{
 
 
 class Poller;
-class EventLoop{
+class EventLoop:Noncopyable{
 public:
     EventLoop()
     :   wakeupFd_(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)), 

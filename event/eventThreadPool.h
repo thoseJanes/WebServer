@@ -4,7 +4,7 @@
 namespace webserver{
 
 
-class EventThreadPool{
+class EventThreadPool:Noncopyable{
 public:
     EventThreadPool(EventLoop* baseLoop, string_view name):next_(0), baseLoop_(baseLoop), name_(name){
     }

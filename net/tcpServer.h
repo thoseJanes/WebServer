@@ -7,7 +7,7 @@
 #include <functional>
 namespace webserver{
 
-class TcpServer{
+class TcpServer:Noncopyable{
 public:
     typedef EventThread::ThreadInitCallback ThreadInitCallback;
     TcpServer(EventLoop* baseLoop, string_view name, InetAddress addr, bool reusePort)

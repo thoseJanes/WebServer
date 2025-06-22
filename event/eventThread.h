@@ -6,7 +6,7 @@
 namespace webserver{
 
 //假设start和析构在同一个线程中。仍有可能在loop之前quit。这个问题要如何解决？
-class EventThread{
+class EventThread:Noncopyable{
 public:
     typedef function<void(EventThread*)> ThreadInitCallback;
     EventThread(string_view name)

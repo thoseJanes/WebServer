@@ -5,9 +5,12 @@
 #include <stdio.h>
 #include <sys/uio.h>
 #include <fcntl.h>
-#include "../common/stringArg.h"
 #include <assert.h>
 #include <string.h>
+#include <unistd.h>
+
+#include "../common/stringArg.h"
+#include "../common/patterns.h"
 
 namespace webserver{
 
@@ -69,7 +72,7 @@ int readToBuffer(int fd, char* buf, size_t maxSize, int* err);
 
 
 
-class SmallFileReader{
+class SmallFileReader:Noncopyable{
 public:
     SmallFileReader(StringArg path, size_t maxSize = 64*1024-1):fd_(open(path.c_str(), O_CLOEXEC|O_RDONLY)), mayHaveMore_(true){
         buf_[0] = '\0';
@@ -77,6 +80,12 @@ public:
         assert(fd_ >= 0);
         
         toBuffer(maxSize);
+    }
+    ~SmallFileReader(){
+        if(fd_ >= 0){
+            ::close(fd_);
+            fd_ = -1;
+        }
     }
     bool mayHaveMore(){return mayHaveMore_;}
     int continueReadOverwritesBuffer();
@@ -95,7 +104,7 @@ private:
     bool mayHaveMore_;
 };
 
-class AdaptiveFileReader{
+class AdaptiveFileReader:Noncopyable{
 public:
     AdaptiveFileReader(StringArg path, size_t minBufferSize = 64*1024-1)
     :   fd_(open(path.c_str(), O_CLOEXEC|O_RDONLY)), 
@@ -106,8 +115,16 @@ public:
         
     {
         assert(fd_ >= 0);
-        
         toBuffer(minBufferSize);
+    }
+    ~AdaptiveFileReader(){
+        if(fd_ >= 0){
+            ::close(fd_);
+            fd_ = -1;
+        }
+        if(bufInit_){
+            free(buf_);
+        }
     }
     bool mayHaveMore(){return mayHaveMore_;}
     int continueReadOverwritesBuffer();
@@ -116,11 +133,6 @@ public:
     }
     string toString(){
         return string(buf_);
-    }
-    ~AdaptiveFileReader(){
-        if(bufInit_){
-            free(buf_);
-        }
     }
 private:
     int toBuffer(size_t minBufferSize);
@@ -135,7 +147,7 @@ private:
 
 
 
-class FileAppender{
+class FileAppender:Noncopyable{
 public:
     FileAppender(StringArg path):file_(fopen(path.c_str(), "ae")){
         assert(file_);

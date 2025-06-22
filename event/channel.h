@@ -7,12 +7,13 @@
 #include <functional>
 #include <memory>
 #include "../logging/logger.h"
+#include "../common/patterns.h"
 
 namespace webserver{
 
 using namespace std;
 class EventLoop;
-class Channel{
+class Channel:Noncopyable{
 public:
     enum PollState{
         sNone,

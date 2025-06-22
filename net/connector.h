@@ -11,7 +11,7 @@ namespace webserver{
 
 //即使多次调用start，有可能会在某一时间出现多个retry，但是没关系，至少不会发生致命错误。
 //注意实现方式，这是通过设置状态ConnState实现的。
-class Connector: public enable_shared_from_this<Connector>{
+class Connector:Noncopyable, public enable_shared_from_this<Connector>{
 public:
     enum ConnState{
         sConnected,

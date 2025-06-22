@@ -18,7 +18,7 @@ void setTimerFd(int fd, TimeStamp timeStamp);
 }
 
 class EventLoop;
-class TimerQueue{//虽然功能还行，但感觉结构有点乱了。需要对比一下源码。另外，这样来看，好像这个类中的所有内容都是在EventLoop的线程中运行的？说是被EventLoop管理也不为过。
+class TimerQueue:Noncopyable{//虽然功能还行，但感觉结构有点乱了。需要对比一下源码。另外，这样来看，好像这个类中的所有内容都是在EventLoop的线程中运行的？说是被EventLoop管理也不为过。
 public:
     typedef std::pair<TimeStamp, Timer*> StampTimerPair;
     typedef std::pair<int, Timer*> IdTimerPair;

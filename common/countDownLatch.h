@@ -7,7 +7,7 @@
 
 namespace webserver{
 
-class CountDownLatch{
+class CountDownLatch:Noncopyable{
 public:
     CountDownLatch(int value):mutex_(), condition_(mutex_), counter_(value){
         pthread_cond_init(&cond_, NULL);

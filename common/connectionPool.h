@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include <algorithm>
-#include <memory>
 #include <functional>
 #include "../logging/logger.h"
 #include "../common/condition.h"
@@ -15,6 +14,9 @@ namespace webserver{
 
 
 template<typename T, typename INFO>
+
+//有没有一种可能，连接池根本不需要增加连接数。因为只要给每个线程都创建一个连接，就不会有连接不够用的情况？
+//除非要同时开启多个连接异步查询？或者线程数太多了？
 class ConnectionPool:Noncopyable{
 public:
     typedef std::function<void()> InitCallback;

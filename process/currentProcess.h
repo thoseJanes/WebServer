@@ -6,8 +6,9 @@
 #include <string>
 #include <linux/utsname.h>
 #include <limits.h>
-#include "../common/format.h"
 #include <assert.h>
+
+#include "../common/format.h"
 
 namespace webserver{
 

@@ -10,7 +10,7 @@ namespace webserver{
 
 
 
-class HttpParser{
+class HttpParser:Noncopyable{
 public:
     /*
         body部分有4种情况：

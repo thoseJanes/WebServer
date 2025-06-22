@@ -1,10 +1,12 @@
 #ifndef WEBSERVER_THREAD_THREAD_H
 #define WEBSERVER_THREAD_THREAD_H
+#include "currentThread.h"
+
 #include <functional>
 #include <string>
 #include <sys/prctl.h>
 #include <atomic>
-#include "currentThread.h"
+
 #include "../common/countDownLatch.h"
 
 using namespace std;
@@ -21,7 +23,7 @@ struct ThreadData{
 
 void* runInThread(void* threadData);
 
-class ThreadHandler{
+class ThreadHandler:Noncopyable{
 public:
     ThreadHandler(function<void()> func, string_view name = "")
     :func_(std::move(func)), name_(name), started_(false), joined_(false), handlerThreadTid_(CurrentThread::tid()){

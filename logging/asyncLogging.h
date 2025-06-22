@@ -3,12 +3,11 @@
 #include "logFile.h"
 #include "../common/strStream.h"
 #include "../process/threadHandler.h"
-#include <queue>
 #include <memory>
 using namespace std;
 namespace webserver{
 
-class AsyncLogging{
+class AsyncLogging:Noncopyable{
 public:
 AsyncLogging(string baseName, int rollSize, int flushInterval);
 ~AsyncLogging();

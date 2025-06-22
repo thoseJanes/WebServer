@@ -8,7 +8,7 @@
 namespace webserver{
 
 //用法:setNewConnectionCallback->listen->~
-class Acceptor{
+class Acceptor:Noncopyable{
 public:
     Acceptor(EventLoop* loop, InetAddress addr, bool reusePort = false):loop_(loop), socket_(Socket::nonblockingSocket(addr.getFamily())), channel_(new Channel(socket_.fd(), loop)){
         socket_.setReuseAddr(true);

@@ -14,7 +14,7 @@ namespace detail{
 
 
 template<int SIZE>
-class StreamBuffer: public Noncopyable{
+class StreamBuffer: Noncopyable{
 public:
     StreamBuffer():cur_(data_){}
     void append(const char* buf, int len){
@@ -62,7 +62,7 @@ private:
 
 }
 
-class Fmt: public Noncopyable{
+class Fmt: Noncopyable{
 public:
     Fmt(const char* fmt, ...);
     char buf_[32];
@@ -71,7 +71,7 @@ public:
 
 using namespace std;
 template<int SIZE>
-class StrStream: public Noncopyable{
+class StrStream: Noncopyable{
     typedef detail::StreamBuffer<SIZE> Buffer;
     typedef StrStream self;
 public:

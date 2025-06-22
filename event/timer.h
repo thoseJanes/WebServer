@@ -8,7 +8,7 @@
 #include <limits>
 namespace webserver{
 
-class Timer{
+class Timer:Noncopyable{
     typedef std::function<void()> Func;
 public:
     explicit Timer(TimeStamp timeStamp, Func callback, double interval = -1.0):timeStamp_(timeStamp), callback_(callback), interval_(interval){

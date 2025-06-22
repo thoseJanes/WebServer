@@ -27,7 +27,7 @@ private:
     std::map<string, void*> context_;
 };
 
-struct HttpContext{
+struct HttpContext:Noncopyable{
     HttpParser* paser;
     ContextMap context;
 };
@@ -37,7 +37,7 @@ void defaultHttpCallback(const HttpRequest* request, HttpResponse* response, Con
 //void defaultHttpCallback(const HttpRequest* request, HttpResponse* response);
 }
 
-class HttpServer{
+class HttpServer:Noncopyable{
 public:
     typedef function<void(const HttpRequest* request, HttpResponse* response, ContextMap& context)> HttpCallback;
     //typedef function<void(const HttpRequest* request, HttpResponse* response)> HttpCallback;

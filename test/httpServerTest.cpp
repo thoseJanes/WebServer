@@ -1,14 +1,13 @@
+#include <hiredis/hiredis.h>
+#include <hiredis/read.h>
+
 #include "../http/httpServer.h"
 #include "../logging/logger.h"
 #include "../common/fileUtil.h"
 #include "../mysql/sqlConnectionGuard.h"
 #include "../redis/redisConnectionGuard.h"
-#include <hiredis/hiredis.h>
-#include <hiredis/read.h>
 
 using namespace webserver;
-
-
 string sqlUser = "test_http";
 string password = "123456";
 string databaseName = "test_http_database";
@@ -68,9 +67,6 @@ size_t generateSessionId(){
 /*
 class SqlConnectionUtil{
     SqlConnectionUtil(SqlConnectionPool sqlPool);
-    
-
-
     char buf[1024];
     SqlConnectionPool* sqlPool_;
 };

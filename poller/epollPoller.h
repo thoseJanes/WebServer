@@ -1,10 +1,12 @@
 #ifndef WEBSERVER_POLLER_EPOLLPOLLER_H
 #define WEBSERVER_POLLER_EPOLLPOLLER_H
 #include "../event/poller.h"
+
 #include <sys/epoll.h>
+#include "../common/patterns.h"
 namespace webserver{
 
-class EpollPoller:public Poller{
+class EpollPoller:Noncopyable, public Poller{
 public:
     EpollPoller(EventLoop* loop);
     ~EpollPoller();

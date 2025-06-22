@@ -7,7 +7,7 @@
 namespace webserver{
 
 
-class Condition{
+class Condition:Noncopyable{
 public:
     Condition(MutexLock& mutex):mutex_(mutex){
         MCHECK(pthread_cond_init(&cond_, NULL));

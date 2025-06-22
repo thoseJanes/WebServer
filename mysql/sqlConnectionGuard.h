@@ -9,6 +9,7 @@
 
 namespace webserver{
 
+
 typedef ConnectionPool<MYSQL, mysql::SqlServer> SqlConnectionPool;
 
 typedef StrStream<512> QueryStream;

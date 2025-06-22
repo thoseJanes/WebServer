@@ -9,7 +9,7 @@ namespace webserver{
 
 using namespace std;
 
-class LogFile{
+class LogFile:Noncopyable{
 public:
     LogFile(string& baseName, 
             off_t maxSize = 64*1024, 

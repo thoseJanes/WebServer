@@ -5,7 +5,7 @@
 #include "tcpConnection.h"
 namespace webserver{
 
-class TcpClient{
+class TcpClient:Noncopyable{
 public:
     TcpClient(EventLoop* loop, string_view name, InetAddress serverAddress, bool enableRetry = true)
     :   loop_(loop), 

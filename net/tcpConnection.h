@@ -24,7 +24,7 @@ namespace detail{
 }
 
 //用法：[setHighWaterCallback]->控制send或者read
-class TcpConnection : public enable_shared_from_this<TcpConnection>{
+class TcpConnection : Noncopyable, public enable_shared_from_this<TcpConnection>{
 public:
 
     typedef ConnBuffer Buffer;

@@ -51,7 +51,7 @@ private:
 };
 
 
-class BlockGuard{
+class BlockGuard:Noncopyable{
 public:
     BlockGuard(MutexLock& owner):owner_(owner){
         owner_.unassignHolder();

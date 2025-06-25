@@ -19,33 +19,22 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 #   file2.cc
 #   )
 # 自动收集源文件
-aux_source_directory(common SOURCE_FILES)
-aux_source_directory(logging SOURCE_FILES)
-aux_source_directory(process SOURCE_FILES)
-aux_source_directory(time SOURCE_FILES)
-aux_source_directory(event SOURCE_FILES)
-aux_source_directory(net SOURCE_FILES)
-aux_source_directory(poller SOURCE_FILES)
-aux_source_directory(http SOURCE_FILES)
-aux_source_directory(mysql SOURCE_FILES)
-# 添加可执行文件
-# add_executable(MyExecutable ${SOURCE_FILES})
-add_library(webserver_base ${SOURCE_FILES})
-target_link_libraries(webserver_base pthread rt)
+add_subdirectory(myNetLib)
+add_subdirectory(myWebServer)
 
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
-find_package(MySQL REQUIRED)
-target_include_directories(webserver_base PRIVATE ${MYSQL_INCLUDE_DIR})
-target_link_libraries(webserver_base ${MYSQL_LIB})
+# list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
+# find_package(MySQL REQUIRED)
+# target_include_directories(webserver_base PRIVATE ${MYSQL_INCLUDE_DIR})
+# target_link_libraries(webserver_base ${MYSQL_LIB})
 
-set(HIREDIS_INCLUDE_DIR /usr/local/include/hiredis/include)
-set(HIREDIS_LIBRARY /usr/local/lib/libhiredis.so)
+# set(HIREDIS_INCLUDE_DIR /usr/local/include/hiredis/include)
+# set(HIREDIS_LIBRARY /usr/local/lib/libhiredis.so)
 
-add_executable(testProgram ./test/httpServerTest.cpp)
-target_link_libraries(testProgram webserver_base)
-target_link_libraries(testProgram ${MYSQL_LIB})
-target_link_libraries(testProgram ${HIREDIS_LIBRARY})
+# add_executable(testProgram ./test/httpServerTest.cpp)
+# target_link_libraries(testProgram webserver_base)
+# target_link_libraries(testProgram ${MYSQL_LIB})
+# target_link_libraries(testProgram ${HIREDIS_LIBRARY})
 
 # 以下操作会将webserver安装到/usr/local/include目录下。
 

@@ -9,5 +9,5 @@
 !*/
 
 build/
-test/build/
+myWebServer/test/build/
 .vscode/

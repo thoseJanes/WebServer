@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<link href="desktop.css" rel="stylesheet" type="text/css" />
+	<title>desktop</title>
+</head>
+
+<body style="overflow: hidden">
+	<div style="align-content: center;">
+		<p>
+			网页favicon <img src="favicon.png"> 来自 <a target="_blank" href="https://icons8.com/icon/XgVsZZvTh0tg/website">网站</a> <a target="_blank" href="https://icons8.com">Icons8</a>
+		</p>
+	</div>
+
+	<div style="align-content: center;">
+		<p id="dynamicContent">
+		</p>
+	</div>
+
+	<div id="functions" class="startbuttons">
+		<!-- <a class="study" href="/study/study.html">学习</a> -->
+		<a href="/game/game.html">test</a>
+	</div>
+
+	<script>
+		function $(Id){
+			return document.getElementById(Id);
+		}
+
+		document.addEventListener("DOMContentLoaded", function(){
+			fetch("/username.cgi", {
+				method: 'GET',
+				// headers:{
+				// 	'Accept': 'text/html'
+				// }
+			}).then(response => {
+				if(!response.ok){
+					throw new Error('error')
+				}
+				return response.text();
+			}).then(data=>{
+				$('dynamicContent').innerHTML = data;
+				if(data.includes('欢迎')){
+					$('functions').style.display = 'block';
+				}else{
+					$('functions').style.display = 'none';
+				}
+				//
+				//加载按钮控件。游戏&学习
+			}).catch(error=>{
+				console.error('获取用户名失败：', error);
+				$('dynamicContent').innerHTML = '无法取得与服务器的连接！请检查网络！';
+			});
+		});
+
+
+	</script>
+</body>
+</html>

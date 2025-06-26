@@ -59,12 +59,19 @@ void TcpConnection::send(string_view str){
         loop_->runInLoop(bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, string(str)));
     }
 }
-void TcpConnection::send(ConnBuffer* buffer){
+void TcpConnection::sendAndRetrieve(ConnBuffer* buffer){
     if(loop_->isInLoopThread()){
         sendInLoop(buffer->readerBegin(), buffer->readableBytes());
         buffer->retrieveAll();
     }else{
         loop_->runInLoop(bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, buffer->retrieveAllAsString()));
+    }
+}
+void TcpConnection::send(const ConnBuffer* buffer){
+    if(loop_->isInLoopThread()){
+        sendInLoop(buffer->readerBegin(), buffer->readableBytes());
+    }else{
+        loop_->runInLoop(bind<void(TcpConnection::*)(string&)>(&TcpConnection::sendInLoop, this, buffer->toString()));
     }
 }
 void TcpConnection::sendDelay(string_view str, int delayMs){

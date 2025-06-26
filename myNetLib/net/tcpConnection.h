@@ -23,6 +23,9 @@ namespace detail{
     void defaultConnectCallback(const shared_ptr<TcpConnection>& conn);
 }
 
+
+
+
 //用法：[setHighWaterCallback]->控制send或者read
 class TcpConnection : Noncopyable, public enable_shared_from_this<TcpConnection>{
 public:
@@ -73,7 +76,8 @@ public:
 
     void send(const void* buf, size_t len);
     void send(string_view str);
-    void send(ConnBuffer* buffer);
+    void send(const ConnBuffer* buffer);
+    void sendAndRetrieve(ConnBuffer* buffer);
     void sendDelay(string_view str, int delayMs);
 
     void startRead();

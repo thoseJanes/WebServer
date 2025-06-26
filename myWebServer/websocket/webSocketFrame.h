@@ -19,23 +19,23 @@ namespace mywebserver{
 class WebSocketFrame{
 public:
     typedef mynetlib::ConnBuffer Buffer;
-    WebSocketFrame():mask_(0), payload_(125, 2+8+4), payloadMasked_(false), payloadLength_(0){
+    WebSocketFrame():mask_(0), payload_(125, 2+8+4), payloadMasked_(false), payloadLength_(0), firstByte_(0x80){
     };
-    ~WebSocketFrame();
+    ~WebSocketFrame() = default;
     
     //注意不要提供其它方法获取payload_
-    const Buffer& getFrameBuffer(const void* data, size_t len){
+    const Buffer& formatFrameToBuffer(const void* data, size_t len){
         setPayload(data, len);
-        formatFrameToBuffer(true);
+        formatFrameToBuffer();
         return payload_;
     }
 
-    const Buffer& formatFrameToBuffer(bool masking = true){
+    const Buffer& formatFrameToBuffer(){
         payload_.retrieve(payload_.readableBytes() - payloadLength_);//先去除之前prepend的部分
         //反向前插头部
         if(mask_){
             payload_.prepend(&maskingKey_, sizeof(maskingKey_));
-            if(masking){
+            if(!payloadMasked_){
                 maskPayload();
             }
         }
@@ -76,7 +76,7 @@ public:
         payloadMasked_ = false;
     }
 
-    string_view getPayloadView(){
+    string_view getPayloadView() const {
         if(payloadMasked_){
             LOG_ERROR << "WebsocketFrame::getPayloadView - get masked payload";
         }
@@ -140,7 +140,6 @@ public:
         return firstByte_;
     }
 
-    
 private:
     int getPayloadLen(){
         if(payloadLength_ < 126){
@@ -153,9 +152,11 @@ private:
     }
 
     void maskPayload(){
-        char* payloadStart = payload_.writerBegin() - payloadLength_;
-        webSocket::toMasked(payloadStart, payloadLength_, maskingKey_);
-        payloadMasked_ = true;
+        if(!payloadMasked_){
+            char* payloadStart = payload_.writerBegin() - payloadLength_;
+            webSocket::toMasked(payloadStart, payloadLength_, maskingKey_);
+            payloadMasked_ = true;
+        }
     }
 
     Buffer payload_;
@@ -224,7 +225,7 @@ public:
         return request_;
     }
 
-    bool isResponseValid(HttpResponse& response){
+    bool isResponseValid(const HttpResponse& response){
         return webSocket::isWebSocketHandShakeResponseValid(request_, response);
     }
 private:
@@ -244,9 +245,8 @@ private:
 
 class WebSocketHandShakeResponse{
 public:
-    explicit WebSocketHandShakeResponse(HttpRequest& request):response_(&request){
+    explicit WebSocketHandShakeResponse(const HttpRequest& request):response_(&request){
         assert(webSocket::isWebSocketHandShakeRequestValid(request));
-
         response_.setStatusCode(101);
         response_.setHeaderValue("Upgrade", "websocket");
         response_.setHeaderValue("Connection", "Upgrade");
@@ -259,10 +259,10 @@ public:
         handleRequestExtensions(request);
     }
 
-    void handleRequestProtocol(HttpRequest& request){
+    void handleRequestProtocol(const HttpRequest& request){
         //TOBECOMPLETED
     }
-    void handleRequestExtensions(HttpRequest& request){
+    void handleRequestExtensions(const HttpRequest& request){
         //TOBECOMPLETED
     }
 

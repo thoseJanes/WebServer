@@ -62,7 +62,7 @@ string webSocket::calAcceptKey(const string& webSocketKey){
     return string(base64Str, kAcceptKeyLength);
 }
 
-bool webSocket::isWebSocketHandShakeRequestValid(mywebserver::HttpRequest& request){
+bool webSocket::isWebSocketHandShakeRequestValid(const mywebserver::HttpRequest& request){
     return request.getMethod() == http::mGET &&
             (request.getHeaderValue("Sec-WebSocket-Key").size() == webSocket::kKeyLength_) &&
             (!request.getHeaderValue("Sec-WebSocket-Version").empty()) &&
@@ -70,7 +70,7 @@ bool webSocket::isWebSocketHandShakeRequestValid(mywebserver::HttpRequest& reque
             (request.getHeaderValue("Connection") == "Upgrade");
 }
 
-bool webSocket::isWebSocketHandShakeResponseValid(mywebserver::HttpRequest& request, mywebserver::HttpResponse& response){
+bool webSocket::isWebSocketHandShakeResponseValid(const mywebserver::HttpRequest& request, const mywebserver::HttpResponse& response){
     return isWebSocketHandShakeRequestValid(request) &&
             response.getStatusCode() == 101 &&
             (response.getHeaderValue("Sec-WebSocket-Version") == request.getHeaderValue("Sec-WebSocket-Version")) &&

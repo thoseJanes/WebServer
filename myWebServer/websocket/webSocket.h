@@ -96,8 +96,8 @@ namespace webSocket{
     }
 
     
-    bool isWebSocketHandShakeRequestValid(HttpRequest& request);
-    bool isWebSocketHandShakeResponseValid(HttpRequest& request, HttpResponse& response);
+    bool isWebSocketHandShakeRequestValid(const HttpRequest& request);
+    bool isWebSocketHandShakeResponseValid(const HttpRequest& request, const HttpResponse& response);
 
 
     constexpr char magicNumber[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

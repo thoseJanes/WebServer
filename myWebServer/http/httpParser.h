@@ -3,6 +3,7 @@
 #include "../../myNetLib/net/connBuffer.h"
 #include "../../myNetLib/time/timeStamp.h"
 #include "httpRequest.h"
+#include "httpResponse.h"
 
 #include <memory>
 
@@ -24,41 +25,68 @@ public:
         当Content-Length和Transfer-Encoding同时出现时，优先处理Transfer-Encoding
     */
     enum ParserState{
-        sExpectRequestLine,
-        sExpectRequestHeader,
+        sExpectLine,
+        sExpectHeader,
         sExpectConetentBody,
             sExpectBlockBodySize,
             sExpectBlockBodyData,
             sExpectBlockBodyEnd,
         sGotAll
     };
-    HttpParser():state_(sExpectRequestLine){}
+    enum MessageType{
+        tRequest,
+        tResponse,
+        tUnknow
+    };
+    HttpParser():state_(sExpectLine), messageType_(tUnknow){}
     ~HttpParser() = default;
 
-    bool parseRequestLine(const char* start, const char* end);
-    bool parseRequestHeader(const char* start, const char* end);
-    ParserState freshBodyTypeStatus();
-
     bool parseRequest(ConnBuffer* buf, TimeStamp time);
+    bool parseResponse(ConnBuffer* buf);
 
     const HttpRequest* getRequest(){
-        return request_.get();
+        assert(messageType_ == tRequest);
+        return dynamic_cast<HttpRequest*>(message_.get());
+    }
+    const HttpResponse* getResponse(){
+        assert(messageType_ == tResponse);
+        return dynamic_cast<HttpResponse*>(message_.get());
     }
     void reset(){
         // HttpRequest dummy;
         // request_.swap(dummy);
-        state_ = sExpectRequestLine;
-        request_.reset();
+        state_ = sExpectLine;
+        // request_.reset();
+        // response_.reset();
+        message_.reset();
     }
     ParserState getState() const {
         return state_;
     }
 private:
+    bool parseRequestLine(const char* start, const char* end);
+    bool parseResponseLine(const char* start, const char* end);
+    bool parseLine(const char* start, const char* end){
+        if(tRequest == messageType_){
+            return parseRequestLine(start, end);
+        }else if(tResponse == messageType_){
+            return parseResponseLine(start, end);
+        }else{
+            LOG_FATAL << "HttpParser::parseLine - Unknow message type!";
+            return false;
+        }
+    }
+    bool parseHeader(const char* start, const char* end);
+    bool parseLoop(ConnBuffer* buf);
+    ParserState freshBodyTypeStatus();
+
     typedef http::Version Version;
     typedef http::Method Method;
     typedef http::BodyType BodyType;
 
-    unique_ptr<HttpRequest> request_;
+    unique_ptr<http::HttpMessage> message_;
+    MessageType messageType_;
+    //unique_ptr<HttpResponse> response_;
     ParserState state_;
 
     BodyType bodyType_;

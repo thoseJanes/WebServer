@@ -45,86 +45,101 @@ namespace http{
 
     string_view trim(const char* start, const char* end);
 
-    // class HttpMessage{
-    // public:
-    //     typedef http::Version Version;
-    //     typedef http::Method Method;
-    //     friend HttpRequest;
-    //     HttpMessage(){}
-    //     ~HttpMessage(){}
-    //     string getHeaderValue(string& item) const {
-    //         if(header_.find(item) == header_.end()){
-    //             return "";
-    //         }
-    //         return header_.at(item);
-    //     }
-    //     const Version& getVersion(){
-    //         return version_;
-    //     }
-    //     const string& getBody(){
-    //         return body_;
-    //     }
+    class HttpMessage{
+    public:
+        typedef http::Version Version;
+        typedef http::Method Method;
+        HttpMessage():version_(http::vUNKNOW){}
+        virtual ~HttpMessage(){}
+        string getHeaderValue(const string& item) const {
+            if(header_.find(item) == header_.end()){
+                return "";
+            }
+            return header_.at(item);
+        }
+        const Version& getVersion() const {
+            return version_;
+        }
         
-    //     void setHeaderValue(string item, string value){
-    //         if(header_.find(item) == header_.end()){
-    //             header_.insert({item, value});
-    //         }else{
-    //             header_.at(item) = value;
-    //         }
-    //     }
-    //     void setVersion(Version version){
-    //         version_ = version;
-    //     }
-    //     void setBody(string_view str){
-    //         body_ = str;
-    //     }
-    
-    // private:
-    //     Version version_;
-    //     map<string, string> header_;
-    //     string body_;
-    // };
+        void setHeaderValue(string item, string value){
+            if(header_.find(item) == header_.end()){
+                header_.insert({item, value});
+            }else{
+                header_.at(item) = value;
+            }
+        }
+        void setVersion(Version version){
+            version_ = version;
+        }
+        void resolveVersion(string_view str){
+            if("HTTP/1.0" == str){
+                version_ = http::vHTTP1_0;
+            }else if("HTTP/1.1" == str){
+                version_ = http::vHTTP1_1;
+            }else{
+                version_ = http::vUNKNOW;
+            }
+        }
+
+        virtual const string& getBody() const {
+            return body_;
+        }
+        virtual void setBody(string_view str){
+            body_ = str;
+        }
+        virtual void appendBody(string_view str){
+            body_.append(str);
+        }
+        virtual BodyType getBodyType() const = 0;
+    protected:
+        Version version_;
+        map<string, string> header_;
+        string body_;
+    };
 }
 
 
-class HttpRequest{
+class HttpRequest:public http::HttpMessage{
 public:
     typedef http::Version Version;
     typedef http::Method Method;
     typedef http::BodyType BodyType;
-    HttpRequest(TimeStamp time, Method method = http::mUNKNOW, Version version = http::vUNKNOW):version_(version), method_(method), reqTime_(time){}
-    ~HttpRequest(){}
-
-    string getHeaderValue(const string& item) const {
-        if(header_.find(item) == header_.end()){
-            return "";
-        }
-        return header_.at(item);
-    }
-
-    const Version& getVersion() const {
-        return version_;
-    }
-    const string& getBody() const {
-        return body_;
-    }
-    
-    void setHeaderValue(const string& item, const string& value){
-        if(header_.find(item) == header_.end()){
-            header_.insert({item, value});
-        }else{
-            header_.at(item) = value;
-        }
-    }
-    void setVersion(Version version){
+    HttpRequest(TimeStamp time, Method method = http::mUNKNOW, Version version = http::vUNKNOW):method_(method), reqTime_(time){
         version_ = version;
     }
-    void setBody(string_view str){
-        body_ = str;
-    }
-    void appendBody(string_view str){
-        body_.append(str);
-    }
+    ~HttpRequest(){}
+
+    // string getHeaderValue(const string& item) const {
+    //     if(header_.find(item) == header_.end()){
+    //         return "";
+    //     }
+    //     return header_.at(item);
+    // }
+
+    // const Version& getVersion() const {
+    //     return version_;
+    // }
+    // const string& getBody() const {
+    //     return body_;
+    // }
+    
+    // void setHeaderValue(const string& item, const string& value){
+    //     if(header_.find(item) == header_.end()){
+    //         header_.insert({item, value});
+    //     }else{
+    //         header_.at(item) = value;
+    //     }
+    // }
+    // void setVersion(Version version){
+    //     version_ = version;
+    // }
+    // void setBody(string_view str){
+    //     body_ = str;
+    // }
+
+    // void appendBody(string_view str){
+    //     body_.append(str);
+    // }
 
     const Method& getMethod() const {return method_;}
     void setMethod(Method method){
@@ -146,15 +161,7 @@ public:
         else{setMethod(http::mUNKNOW);}
         #undef RESOLVE_METHOD_GENERATOR
     }
-    void resolveVersion(string_view str){
-        if("HTTP/1.0" == str){
-            version_ = http::vHTTP1_0;
-        }else if("HTTP/1.1" == str){
-            version_ = http::vHTTP1_1;
-        }else{
-            version_ = http::vUNKNOW;
-        }
-    }
+    
     void setPath(string_view str){
         path_ = str;
     }
@@ -192,7 +199,7 @@ public:
     }
 
     //当Content-Length和Transfer-Encoding同时出现时，优先处理Transfer-Encoding
-    BodyType getBodyType() const {
+    BodyType getBodyType() const override {
         if(method_ == Method::mGET){
             return BodyType::bNoBody;
         }else if(header_.find("Transfer-Encoding") != header_.end() && getHeaderValue("Transfer-Encoding") == "chunked"){
@@ -215,16 +222,16 @@ public:
     }
 
 private:
-    Version version_;
+    //Version version_;
     Method method_;
     string path_;
     string message_;
     
     TimeStamp reqTime_;
     
-    map<string, string> header_;
+    //map<string, string> header_;
     
-    string body_;
+    // string body_;
 
     
     //const void* request_;

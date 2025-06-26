@@ -11,3 +11,4 @@
 build/
 myWebServer/test/build/
 .vscode/
+.cache/

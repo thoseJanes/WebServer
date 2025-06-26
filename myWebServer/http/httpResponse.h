@@ -18,11 +18,16 @@ namespace http{
 }
 
 //应当是：通过request来构造response（以获取version）？
-class HttpResponse{
+class HttpResponse:public http::HttpMessage{
 public:
     typedef http::Version Version;
-    HttpResponse(const HttpRequest* request):version_(request->getVersion()), statusCode_(-1), contentType_(kData){}
-    HttpResponse():version_(Version::vUNKNOW), statusCode_(-1){}
+    typedef http::BodyType BodyType;
+    HttpResponse(const HttpRequest* request):statusCode_(-1), contentType_(kData){
+        version_ = request->getVersion();
+    }
+    HttpResponse():statusCode_(-1){
+        version_ = Version::vUNKNOW;
+    }
     ~HttpResponse(){}
     string toStringWithoutBody(){
         string out;
@@ -89,38 +94,33 @@ public:
         }
     }
 
-    string getHeaderValue(const string& item) const {
-        if(header_.find(item) == header_.end()){
-            return "";
-        }
-        return header_.at(item);
-    }
-    const Version& getVersion(){
-        return version_;
-    }
-    const string& getBody(){
-        return body_;
-    }
-
-    void setHeaderValue(const string& item, const string& value){
-        if(header_.find(item) == header_.end()){
-            header_.insert({item, value});
-        }else{
-            header_.at(item) = value;
-        }
-    }
-    void setVersion(Version version){
-        version_ = version;
-    }
-    
-    void setBody(string_view str){
+    // string getHeaderValue(const string& item) const {
+    //     if(header_.find(item) == header_.end()){
+    //         return "";
+    //     }
+    //     return header_.at(item);
+    // }
+    // const Version& getVersion(){
+    //     return version_;
+    // }
+    // void setHeaderValue(const string& item, const string& value){
+    //     if(header_.find(item) == header_.end()){
+    //         header_.insert({item, value});
+    //     }else{
+    //         header_.at(item) = value;
+    //     }
+    // }
+    // void setVersion(Version version){
+    //     version_ = version;
+    // }
+    void setBody(string_view str) override {
         if(!body_.empty()){
             LOG_ERROR << "Failed in setBody. Body has been set data, please clear body content first.";
         }else{
             body_ = str;
         }
     }
-    void appendBody(string_view str){
+    void appendBody(string_view str) override {
         if(kPath == contentType_){
             LOG_ERROR << "Failed in appendBody. Body has been set as file, please clear body content first.";
         }else{
@@ -137,7 +137,18 @@ public:
         // SmallFileReader fileContent(path, 64*64*1024);
         //     appendBody(fileContent.toStringView());
     }
-    bool trySetBodyWithFile(string path){
+
+    BodyType getBodyType() const override {
+        if(header_.find("Transfer-Encoding") != header_.end() && getHeaderValue("Transfer-Encoding") == "chunked"){
+            return BodyType::bTransferEncoding;
+        }else if(header_.find("Content-Length") != header_.end()){
+            return BodyType::bContentLength;
+        }else{
+            return BodyType::bNoBody;
+        }
+    }
+
+    bool trySetBodyWithFile(const string& path){
         if(detail::fileExists(path)){
             setBodyWithFile(path);
             return true;
@@ -154,7 +165,7 @@ public:
         statusCode_ = statusCode;
     }
 
-    int getStatusCode(){
+    int getStatusCode() const {
         return statusCode_;
     }
 
@@ -195,10 +206,9 @@ private:
         out += "\r\n";
     }
 
-    Version version_;
     int statusCode_;
-    map<string, string> header_;
     string body_;
+    // string path_;
 
     enum ContentType{
         kData,

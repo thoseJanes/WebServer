@@ -3,29 +3,11 @@
 #include "../../myNetLib/net/tcpServer.h"
 #include "httpParser.h"
 #include "httpResponse.h"
-
+#include "contextMap.h"
 
 namespace mywebserver{
 
-class ContextMap:Noncopyable{
-public:
-    void setContext(string key, void* value) {
-        assert(!hasContext(key));
-        context_.insert({key, value});
-    }
-    bool hasContext(string key) {
-        return context_.find(key) != context_.end();
-    }
-    void* getContext(string key) {
-        return context_.at(key);
-    }
-    void removeContext(string key){
-        auto ret = context_.erase(key);
-        assert(ret == 1);
-    }
-private:
-    std::map<string, void*> context_;
-};
+
 
 struct HttpContext:Noncopyable{
     HttpParser* paser;

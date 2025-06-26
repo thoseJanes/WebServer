@@ -1,13 +1,17 @@
 #include "httpParser.h"
+#include "httpRequest.h"
+#include "httpResponse.h"
+#include <string>
 
 using namespace mywebserver;
 
 bool HttpParser::parseRequestLine(const char* start, const char* end){
+    HttpRequest* request = dynamic_cast<HttpRequest*>(message_.get());
     const char* mEnd = std::find(start, end, ' ');
     if(mEnd == end){
         return false;
     }
-    request_->resolveMethod(string_view(start, mEnd-start));
+    request->resolveMethod(string_view(start, mEnd-start));
     mEnd++;
 
     const char* uEnd = std::find(mEnd, end, ' ');
@@ -15,18 +19,37 @@ bool HttpParser::parseRequestLine(const char* start, const char* end){
         return false;
     }
     const char* meStart = std::find(mEnd, uEnd, '?');
-    request_->setPath(string_view(mEnd, meStart-mEnd));
+    request->setPath(string_view(mEnd, meStart-mEnd));
     if(meStart != uEnd){
         meStart++;
-        request_->setMessage(string_view(meStart, uEnd-meStart));
+        request->setMessage(string_view(meStart, uEnd-meStart));
     }
     uEnd++;
 
-    request_->resolveVersion(string_view(uEnd, end-uEnd));
+    request->resolveVersion(string_view(uEnd, end-uEnd));
 
-    return request_->valid();
+    return request->valid();
 }
-bool HttpParser::parseRequestHeader(const char* start, const char* end){
+bool HttpParser::parseResponseLine(const char* start, const char* end){
+    HttpResponse* response = dynamic_cast<HttpResponse*>(message_.get());
+    const char* vEnd = std::find(start, end, ' ');
+    if(vEnd == end){
+        return false;
+    }
+    response->resolveVersion(string_view(start, vEnd-start));
+    vEnd++;
+
+    const char* sEnd = std::find(vEnd, end, ' ');
+    if(sEnd == end){
+        return false;
+    }
+    response->setStatusCode(std::stoi(string(vEnd, sEnd-vEnd)));
+
+    return response->getVersion() != Version::vUNKNOW;
+    // return response->valid();
+}
+
+bool HttpParser::parseHeader(const char* start, const char* end){
     //string_view str = http::trim(start, end);
 
     const char* valueStart = std::find(start, end, ':');
@@ -35,7 +58,7 @@ bool HttpParser::parseRequestHeader(const char* start, const char* end){
     string_view key = http::trim(start, valueStart);
     string_view value = http::trim(valueStart+1, end);
     if(key.length() > 0){
-        request_->setHeaderValue(string(key), string(value));
+        message_->setHeaderValue(string(key), string(value));
         return true;
     }else{
         return false;
@@ -43,11 +66,11 @@ bool HttpParser::parseRequestHeader(const char* start, const char* end){
     
 }
 HttpParser::ParserState HttpParser::freshBodyTypeStatus(){
-    bodyType_ = request_->getBodyType();
+    bodyType_ = message_->getBodyType();
     if(bodyType_ == BodyType::bNoBody){
         return sGotAll;
     }else if(bodyType_ == BodyType::bContentLength){
-        remainingBlockLen_ = static_cast<size_t>(atol(request_->getHeaderValue("Content-Length").c_str()));
+        remainingBlockLen_ = static_cast<size_t>(atol(message_->getHeaderValue("Content-Length").c_str()));
         if(remainingBlockLen_ > 0){
             return sExpectConetentBody;
         }else{
@@ -63,33 +86,46 @@ HttpParser::ParserState HttpParser::freshBodyTypeStatus(){
     }
 }
 
+
 bool HttpParser::parseRequest(ConnBuffer* buf, TimeStamp time){
+    if(!message_){
+        message_.reset(new HttpRequest(time));
+        assert(messageType_ != tResponse);
+        messageType_ = tRequest;
+    }
+    return parseLoop(buf);
+}
+bool HttpParser::parseResponse(ConnBuffer* buf){
+    if(!message_){
+        message_.reset(new HttpResponse());
+        assert(messageType_ != tRequest);
+        messageType_ = tResponse;
+    }
+    return parseLoop(buf);
+}
+bool HttpParser::parseLoop(ConnBuffer* buf){
     bool hasMore = buf->readableBytes() > 0;
     bool valid = true;
-    if(!request_){
-        request_.reset(new HttpRequest(time));
-    }
     while(hasMore){
-        if(state_ == sExpectRequestLine){
+        if(state_ == sExpectLine){
             const char* end = buf->findCRLF(buf->readerBegin());
             if(end==NULL){
                 hasMore = false;
-            }else if(parseRequestLine(buf->readerBegin(), end)){
-                
-                state_ = sExpectRequestHeader;
+            }else if(parseLine(buf->readerBegin(), end)){
+                state_ = sExpectHeader;
                 buf->retrieveTo(end+2);
             }else{
                 hasMore = false;
                 valid = false;
             }
-        }else if(state_ == sExpectRequestHeader){
+        }else if(state_ == sExpectHeader){
             const char* end = buf->findCRLF(buf->readerBegin());
             if(end==NULL){
                 hasMore = false;
             }else if(end == buf->readerBegin()){
                 state_ = freshBodyTypeStatus();
                 buf->retrieveTo(end+2);
-            }else if(parseRequestHeader(buf->readerBegin(), end)){
+            }else if(parseHeader(buf->readerBegin(), end)){
                 buf->retrieveTo(end+2);
             }else{
                 hasMore = false;
@@ -98,14 +134,14 @@ bool HttpParser::parseRequest(ConnBuffer* buf, TimeStamp time){
         }else if(state_ == sExpectConetentBody){
             if(bodyType_ == BodyType::bContentLength){
                 size_t getLen = min(buf->readableBytes(), remainingBodyLen_);
-                request_->appendBody(string_view(buf->readerBegin(), getLen));
+                message_->appendBody(string_view(buf->readerBegin(), getLen));
                 buf->retrieve(getLen);
                 remainingBodyLen_ -= getLen;
                 state_ = (remainingBodyLen_==0)?sGotAll:sExpectConetentBody;
                 hasMore = (remainingBodyLen_==0)?false:true;
             }else if(bodyType_ == BodyType::bUntilClosed){
                 size_t getLen = buf->readableBytes();
-                request_->appendBody(string_view(buf->readerBegin(), getLen));
+                message_->appendBody(string_view(buf->readerBegin(), getLen));
                 buf->retrieve(getLen);
             }
         }else if(state_ == sExpectBlockBodySize){
@@ -134,7 +170,7 @@ bool HttpParser::parseRequest(ConnBuffer* buf, TimeStamp time){
                 }
             }else{
                 size_t getLen = min(buf->readableBytes(), remainingBlockLen_);
-                request_->appendBody(string_view(buf->readerBegin(), getLen));
+                message_->appendBody(string_view(buf->readerBegin(), getLen));
                 buf->retrieve(getLen);
                 remainingBlockLen_ -= getLen;
                 state_ = sExpectBlockBodyData;
@@ -158,3 +194,5 @@ bool HttpParser::parseRequest(ConnBuffer* buf, TimeStamp time){
     }
     return valid;
 }
+
+

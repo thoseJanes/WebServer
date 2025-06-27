@@ -150,7 +150,7 @@ bool HttpParser::parseLoop(ConnBuffer* buf){
                 hasMore = false;
             }else{
                 string blockLenString = string(buf->readerBegin(), end - buf->readerBegin());
-                remainingBlockLen_ = static_cast<size_t>(atol(blockLenString.c_str()));
+                remainingBlockLen_ = static_cast<size_t>(strtol(blockLenString.c_str(), nullptr, 16));//16进制表达
                 buf->retrieveTo(end+2);//即使remainingBlockLen_为0,当前不一定能接收到4个crlf。怎么标识？
                 state_ = (remainingBlockLen_==0)?sExpectBlockBodyEnd:sExpectBlockBodyData;
             }

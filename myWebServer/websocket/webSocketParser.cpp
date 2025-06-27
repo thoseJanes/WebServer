@@ -39,6 +39,7 @@ bool WebSocketParser::parseFrame(mynetlib::ConnBuffer& buffer){
             if(mask != isServer_){//如果为server，则mask必为true
                 hasMore = false;
                 valid = false;
+                LOG_TRACE << "parseFrame - server get a frame without masking";
             }else{
                 frame_.setMask(mask);
                 parsePayloadAndFreshState(secondByte);
@@ -67,18 +68,16 @@ bool WebSocketParser::parseFrame(mynetlib::ConnBuffer& buffer){
             frame_.setMaskingKey(maskingKey);
             state_ = sExpectPayloadData;
         }else if(sExpectPayloadData == state_){
-            if(buffer.readableBytes()<1){
-                break;
+            if(buffer.readableBytes()>0){//小于1时不能直接break，因为有可能remainingLen_为0（譬如payloadLen为0），之所以不在前面处理这种情况，是因为可能还有下一个连续帧sExpectNextFrame
+                size_t getLen = std::min(buffer.readableBytes(), remainingLen_);
+                if(frame_.getMask()){
+                    webSocket::toUnmasked(buffer.readerBegin(), getLen, frame_.getMaskingKey(), frame_.getPayloadLength());
+                }
+                
+                frame_.appendPayload(buffer.readerBegin(), getLen);
+                buffer.retrieve(getLen);
+                remainingLen_ -= getLen;
             }
-
-            size_t getLen = std::min(buffer.readableBytes(), remainingLen_);
-            if(frame_.getMask()){
-                webSocket::toUnmasked(buffer.readerBegin(), getLen, frame_.getMaskingKey());
-            }
-            
-            frame_.appendPayload(buffer.readerBegin(), getLen);
-            buffer.retrieve(getLen);
-            remainingLen_ -= getLen;
             if(0 == remainingLen_){
                 state_ = (frame_.getFin())?sGotAll:sExpectNextFrame;
             }

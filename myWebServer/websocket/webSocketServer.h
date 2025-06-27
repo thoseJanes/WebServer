@@ -18,31 +18,13 @@ namespace mywebserver{
 
 namespace webSocket{
 
-inline void defaultBadFrameCallback(const shared_ptr<TcpConnection>& conn){
-    WebSocketFrame frame;
-    frame.setFin(true);
-    frame.setFrameType(webSocket::FrameType::tConnectionFrame);
-    conn->send(&frame.formatFrameToBuffer());
-    conn->shutdownWrite();
-}
+void defaultBadFrameCallback(const shared_ptr<TcpConnection>& conn);
 
-inline void defaultHandShakeSucceedCallback(const shared_ptr<TcpConnection>& conn){
-    WebSocketFrame frame;
-    frame.setFrameType(webSocket::FrameType::tPingFrame);
-    conn->send(&frame.formatFrameToBuffer());
-    LOG_INFO << "defaultHandShakeSucceedCallback - send a ping frame";
-}
+void defaultHandshakeSuccessCallback(const shared_ptr<TcpConnection>& conn);
 
-inline void defaultWebSocketCallback(const shared_ptr<TcpConnection>& conn, const WebSocketFrame* frame, ContextMap& context){
-    LOG_INFO << "defaultWebSocketCallback - get a frame with payload:\n" << frame->getPayloadView();
-    if(frame->getFrameType() == webSocket::FrameType::tPingFrame){
-        WebSocketFrame frameOut;
-        frameOut.setFrameType(webSocket::FrameType::tPingFrame);
-        conn->send(&frameOut.formatFrameToBuffer());
-    }else if(frame->getFrameType() == webSocket::FrameType::tConnectionFrame){
-        conn->shutdownWrite();
-    }
-}
+void defaultWebSocketCallback(const shared_ptr<TcpConnection>& conn, const WebSocketFrame* frame, ContextMap& context);
+
+
     
 }
 
@@ -54,11 +36,12 @@ class WebSocketServer{
 public:
     typedef function<void(const shared_ptr<TcpConnection>&, const WebSocketFrame*, ContextMap&)> WebSocketCallback;
     typedef function<void(const shared_ptr<TcpConnection>&)> BadFrameCallback;
-    typedef function<void(const shared_ptr<TcpConnection>&)> HandShakeSucceedCallback;
+    typedef function<void(const shared_ptr<TcpConnection>&)> HandshakeSuccessCallback;
     WebSocketServer(EventLoop* baseLoop, const string& name, InetAddress address)
         :server_(baseLoop, name, address, false),
         badFrameCallback_(webSocket::defaultBadFrameCallback),
-        handShakeCallback_(webSocket::defaultHandShakeSucceedCallback)
+        handshakeCallback_(webSocket::defaultHandshakeSuccessCallback),
+        webSocketCallback_(webSocket::defaultWebSocketCallback)
     {
         server_.setConnectCallback(std::bind(&WebSocketServer::onConnection, this, std::placeholders::_1));
         server_.setMessageCallback(std::bind(&WebSocketServer::onMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -77,13 +60,13 @@ public:
         badFrameCallback_ = cb;
     }
 
-    void setHandShakeSucceedCallback(HandShakeSucceedCallback cb){
-        handShakeCallback_ = cb;
+    void setHandshakeSuccessCallback(HandshakeSuccessCallback cb){
+        handshakeCallback_ = cb;
     }
 private:
     void onConnection(const shared_ptr<TcpConnection>& conn);
     void onMessage(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp time);
-    void onHandShake(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp time, ContextMap* context);
+    void onHandshake(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp time, ContextMap* context);
     void sendHttpResponse400AndShutdownWrite(const shared_ptr<TcpConnection>& conn){
         conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");
         conn->shutdownWrite();
@@ -100,7 +83,7 @@ private:
     TcpServer server_;
     WebSocketCallback webSocketCallback_;
     BadFrameCallback badFrameCallback_;
-    HandShakeSucceedCallback handShakeCallback_;
+    HandshakeSuccessCallback handshakeCallback_;
 
     //WebSocketService service_;//继承该类并重写方法？否，可以绑定到回调上。
 };

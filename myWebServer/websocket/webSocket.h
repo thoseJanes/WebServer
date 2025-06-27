@@ -39,6 +39,26 @@ namespace webSocket{
         tPongFrame = 10,
     };
 
+    inline string frameTypeToString(FrameType type){
+        if(tContinuationFrame == type){
+            return "ContinuationFrame";
+        }else if(tTextFrame == type){
+            return "TextFrame";
+        }else if(tBinaryFrame == type){
+            return "BinaryFrame";
+        }else if(tConnectionFrame == type){
+            return "ConnectionFrame";
+        }else if(tPingFrame == type){
+            return "PingFrame";
+        }else if(tPongFrame == type){
+            return "PongFrame";
+        }else{
+            return "UnknowType";
+        }
+    }
+
+    void generateRandBytes(void* buf, int size);
+
     #define SET_GET_WEBSOCKET_BIT_GENERATOR(name)\
     inline uint8_t get ## name ## InByte(uint8_t firstByte){\
         return (firstByte & webSocket::k ## name ## Pos_)?1:0;\
@@ -82,8 +102,8 @@ namespace webSocket{
         *firstByte = (*firstByte & (~webSocket::kOpcodePos_)) | val;
     }
 
-    inline void toMasked(char* buf, size_t len, uint32_t maskingKey){
-        for(int i=0;i<len;i++){
+    inline void toMasked(char* buf, size_t len, uint32_t maskingKey, size_t offset = 0){
+        for(int i=offset;i<len;i++){
             int j = i%4;
             uint8_t maskingByte = maskingKey >> (j*8);
             *buf = (*buf)^static_cast<char>(maskingByte);//异或做掩码。
@@ -91,13 +111,15 @@ namespace webSocket{
         }
     }
 
-    inline void toUnmasked(char* buf, size_t len, uint32_t maskingKey){
-        toMasked(buf, len, maskingKey);
+    //offset表示在数据的第几个位置（譬如，第一个数据offset为0）。
+    //因为数据是每4个字节进行加密的。
+    inline void toUnmasked(char* buf, size_t len, uint32_t maskingKey, size_t offset){
+        toMasked(buf, len, maskingKey, offset);
     }
 
     
-    bool isWebSocketHandShakeRequestValid(const HttpRequest& request);
-    bool isWebSocketHandShakeResponseValid(const HttpRequest& request, const HttpResponse& response);
+    bool isWebSocketHandshakeRequestValid(const HttpRequest& request);
+    bool isWebSocketHandshakeResponseValid(const HttpRequest& request, const HttpResponse& response);
 
 
     constexpr char magicNumber[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

@@ -16,6 +16,7 @@ public:
         return context_.find(key) != context_.end();
     }
     void* getContext(string key) {
+        assert(hasContext(key));
         return context_.at(key);
     }
     void removeContext(string key){

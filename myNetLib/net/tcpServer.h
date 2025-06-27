@@ -64,6 +64,14 @@ public:
         return started_;
     }
 
+    string getName() const {
+        return name_;
+    }
+
+    size_t getConnectionNum() const {
+        return connections_.size();
+    }
+
 private:
     void newConnection(int sockFd){
         loop_->assertInChannelHandling();

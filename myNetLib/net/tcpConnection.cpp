@@ -35,6 +35,7 @@ TcpConnection::~TcpConnection(){
 }
 
 void TcpConnection::connectEstablished(){
+    loop_->assertInLoopThread();
     assert(state_.connState == sConnecting);
     channel_->tie(shared_from_this());//注意，这里只有用void类型的指针才能共享控制块，见smartPtrTest
     channel_->enableReading();

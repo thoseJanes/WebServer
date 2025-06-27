@@ -13,7 +13,7 @@ namespace mynetlib{
     //也就是说，prepend的数据和append的数据是可以区分开来的。（除非unwrite太多了,或者先retrieve再prepend）
     class ConnBuffer{
     public:
-        ConnBuffer(size_t initialSize = 1024, size_t prependSize = 8):readerIndex_(prependSize), writerIndex_(prependSize){
+        ConnBuffer(size_t initialSize = 1024, size_t prependSize = 8):readerIndex_(prependSize), writerIndex_(prependSize), prependSize_(prependSize), initialSize_(initialSize){
             buf_.resize(prependSize+initialSize);
         }
         ~ConnBuffer(){}

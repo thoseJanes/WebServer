@@ -2,6 +2,7 @@
 
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 
 #include "../../myNetLib/common/format.h"
 #include "../http/httpRequest.h"
@@ -62,7 +63,7 @@ string webSocket::calAcceptKey(const string& webSocketKey){
     return string(base64Str, kAcceptKeyLength);
 }
 
-bool webSocket::isWebSocketHandShakeRequestValid(const mywebserver::HttpRequest& request){
+bool webSocket::isWebSocketHandshakeRequestValid(const mywebserver::HttpRequest& request){
     return request.getMethod() == http::mGET &&
             (request.getHeaderValue("Sec-WebSocket-Key").size() == webSocket::kKeyLength_) &&
             (!request.getHeaderValue("Sec-WebSocket-Version").empty()) &&
@@ -70,12 +71,16 @@ bool webSocket::isWebSocketHandShakeRequestValid(const mywebserver::HttpRequest&
             (request.getHeaderValue("Connection") == "Upgrade");
 }
 
-bool webSocket::isWebSocketHandShakeResponseValid(const mywebserver::HttpRequest& request, const mywebserver::HttpResponse& response){
-    return isWebSocketHandShakeRequestValid(request) &&
+bool webSocket::isWebSocketHandshakeResponseValid(const mywebserver::HttpRequest& request, const mywebserver::HttpResponse& response){
+    return isWebSocketHandshakeRequestValid(request) &&
             response.getStatusCode() == 101 &&
             (response.getHeaderValue("Sec-WebSocket-Version") == request.getHeaderValue("Sec-WebSocket-Version")) &&
             (response.getHeaderValue("Sec-WebSocket-Accept") == webSocket::calAcceptKey(request.getHeaderValue("Sec-WebSocket-Key"))) &&
             (response.getHeaderValue("Upgrade") == "websocket") &&
             (response.getHeaderValue("Connection") == "Upgrade");
             //TOBECOMPLETED//extensions和protocol的判断。
+}
+
+void webSocket::generateRandBytes(void* buf, int size){
+    RAND_bytes((unsigned char*)buf, size);
 }

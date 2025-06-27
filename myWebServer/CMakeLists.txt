@@ -23,7 +23,7 @@ set(HIREDIS_INCLUDE_DIR /usr/local/include/hiredis/include)
 set(HIREDIS_LIBRARY /usr/local/lib/libhiredis.so)
 
 
-add_executable(testProgram ./test/websocketTest.cpp)
+add_executable(testProgram ./test/webSocketServerTest.cpp)
 target_link_libraries(testProgram webserver)
 target_link_libraries(testProgram ${OPENSSL_SSL_LIBRARY})
 target_link_libraries(testProgram ${OPENSSL_CRYPTO_LIBRARY})

@@ -4,12 +4,14 @@ C++实现的高性能网络库及http服务器
 
 本项目是基于C++17（主要是C++11）编写的webserver。  
 实现了一个以事件驱动为核心的非阻塞小型网络库。  
-在网络库基础上编写了一个http服务器，实现了用户注册、登陆、注销及网页用户信息动态更新等功能。
+在网络库基础上实现了http服务器和websocket服务器，实现了用户注册、登陆、注销及网页用户信息动态更新等功能。
 
 **Method**
 ----------
 
-http服务器基于网络库，大部分自主编写；sql连接池、http测试及用到的网页资源皆自主编写；网络库部分主要参考muduo库结构，方法如下。
+http服务器部分基于网络库，大部分自主编写；sql连接池、http测试、websocket相关内容及用到的网页资源皆自主编写。
+
+网络库部分主要参考muduo库结构，方法如下。
 
 在编写中有时会阅读源码和笔记，但是阅读和编写至少隔一天，因为印象记忆可能阻碍理解：
 
@@ -39,10 +41,10 @@ http服务器基于网络库，大部分自主编写；sql连接池、http测试
 *   采用仅关闭写端的方式断开连接，防止消息丢失。
 *   采用智能指针管理对象生命周期，通过bind回调传入智能指针延长相关对象生命周期，防止意外析构。
 *   sql连接、redis连接、互斥锁等设施采用RAII的封装方式，简化API调用。
-*   连接池可动态扩容，防止连接不足时长时间等待。
 *   通过context提供可存储在连接中的上下文信息。
-*   http请求解析器通过状态机实现了请求体的不同传输方式解析（普通传输、分块传输、持续传输直到连接关闭）。
-*   http测试部分实现了注册、登陆、注销、用户信息动态更新等功能，能够正常加载多媒体资源。
+*   通过有限状态机实现了http请求和响应的不同传输方式解析、websocket的帧解析。
+*   通过OpenSSL和http请求响应实现了websocket的握手机制。
+*   http测试部分实现了注册、登陆、注销、用户信息动态更新等功能，能够正常加载多媒体资源。websocket测试部分实现了客户端和服务端的正常通信。
 
 **Demonstrate**
 ---------------
@@ -63,8 +65,9 @@ http功能演示：
 在Ubuntu24.04 LTS上编写  
 CMake版本3.10  
 g++版本13.3.0  
-mysql版本8.0.42
-redis版本7.0.15
+mysql版本8.0.42  
+redis版本7.0.15  
+openssl版本3.4.1  
 c++17
 
 **Usage**
@@ -87,7 +90,7 @@ GRANT ALL PRIVILEGES ON test_http_database.* TO 'test_http'@'localhost';
 
 编写的大致顺序是自底层向上层的。
 
-基础部分包括：common/    process/    time/    logging/，顺序：
+基础部分在mybase目录下，包括：common/    process/    time/    logging/，顺序：  
 patterns、format  
 logStream
 
@@ -100,20 +103,25 @@ condition、countDownLatch
 threadHandler、threadPool  
 asyncLogging
 
-网络部分包括：event/    poller/    net/    http/，顺序：
+connectionPool  
+
+网络库部分在mynetlib目录下，包括：event/    poller/    net/    http/，顺序：  
 socket、inetAddress  
 timer、timerQueue、channel、poller  
 eventLoop、epollPoller  
 eventThread、eventThreadPool  
 acceptor、connector  
 connBuffer、tcpConnection、tcpServer、tcpClient  
-httpRequest、httpResponse、httpParser、httpServer
 
-最后是mysql、redis连接池和http测试：
-connectionPool
-sqlConnectionPool、sqlConnectionGuard
-redisConnectionPool、redisConnectionGuard
-http测试在test/httpServerTest.cpp中，相关测试资源在test/testResource/目录下。
+服务器部分在mywebserver目录下，包括：mysql/    redis/    http/    websocket/，顺序：  
+sqlConnectionPool、sqlConnectionGuard  
+redisConnectionPool、redisConnectionGuard  
+contextMap、httpRequest、httpResponse、httpParser、httpServer  
+webSocket、webSocketHandshake、webSocketFrame、webSocketParser、webSocketServer
+
+最后是websocket和http测试：  
+http测试在mywebserver/test/httpServerTest.cpp中，相关测试资源在myWebServer/test/testResource/目录下。  
+websocket测试在mywebserver/test/webSocketServerTest.cpp中。
 
 **Further study**
 -----------------

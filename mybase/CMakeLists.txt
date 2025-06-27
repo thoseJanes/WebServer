@@ -1,28 +1,14 @@
-cmake_minimum_required(VERSION 3.10)
-project(MyProject)
-
-
-# 设置编译器标志以生成调试信息
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-
-# 设置链接器标志以加载动态符号表
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release")
-endif()
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-#add_subdirectory(test)
-# set(SOURCE_FILES
-#   file1.cc
-#   file2.cc
-#   )
 # 自动收集源文件
-add_subdirectory(mybase)
-add_subdirectory(mynetlib)
-add_subdirectory(mywebserver)
-
+aux_source_directory(common SOURCE_FILES)
+aux_source_directory(logging SOURCE_FILES)
+aux_source_directory(process SOURCE_FILES)
+aux_source_directory(time SOURCE_FILES)
+# aux_source_directory(http SOURCE_FILES)
+# aux_source_directory(mysql SOURCE_FILES)
+# 添加可执行文件
+# add_executable(MyExecutable ${SOURCE_FILES})
+add_library(mybase ${SOURCE_FILES})
+target_link_libraries(mybase pthread rt)
 
 
 # list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
@@ -37,6 +23,9 @@ add_subdirectory(mywebserver)
 # target_link_libraries(testProgram webserver_base)
 # target_link_libraries(testProgram ${MYSQL_LIB})
 # target_link_libraries(testProgram ${HIREDIS_LIBRARY})
+
+
+
 
 # 以下操作会将webserver安装到/usr/local/include目录下。
 

@@ -19,15 +19,22 @@ class SqlConnectionGuard:Noncopyable{//这个类可以在SqlConnectionPool内部
 //应当单线程使用。要传入loop吗？但是loop无法获取结果。
 //所以应当在栈上使用。
 public:
+    //从连接池获取连接
     SqlConnectionGuard(SqlConnectionPool* sqlPool, bool blockingGet = true, int blockingMs = 0):sqlPool_(sqlPool), result_(NULL){
         connection_ = sqlPool_->getConnection(blockingGet, blockingMs);
+    }
+    //直接传入连接
+    SqlConnectionGuard(MYSQL* connection):sqlPool_(nullptr), result_(NULL){
+        connection_ = connection;
     }
     ~SqlConnectionGuard(){
         if(valid()){
             if(result_){
                 mysql_free_result(result_);
             }
-            sqlPool_->putConnection(connection_);
+            if(sqlPool_){
+                sqlPool_->putConnection(connection_);
+            }
         }
     }
     bool valid(){

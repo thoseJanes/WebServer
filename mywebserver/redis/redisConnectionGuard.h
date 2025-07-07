@@ -17,16 +17,24 @@ typedef ConnectionPool<redisContext, redis::RedisServer> RedisConnectionPool;
 class RedisConnectionGuard:Noncopyable{//这个类可以在SqlConnectionPool内部创建?或者声明为SqlConnectionPool的友元。
 //应当单线程使用。要传入loop吗？但是loop无法获取结果。
 //所以应当在栈上使用。
+//问题是，这样只能用于连接池的连接，如果用单个连接则无法使用。如果只使用单个连接，则没必要频繁地创建/销毁/套马甲。算了，先这样用，至少不用手动释放result。
 public:
+    //从连接池获取连接
     RedisConnectionGuard(RedisConnectionPool* redisPool, bool blockingGet = true, int blockingMs = 0):redisPool_(redisPool), result_(NULL), queuedNum_(0){
         connection_ = redisPool_->getConnection(blockingGet, blockingMs);
+    }
+    //直接传入连接。
+    RedisConnectionGuard(redisContext* connection):redisPool_(nullptr), result_(NULL), queuedNum_(0){
+        connection_ = connection;
     }
     ~RedisConnectionGuard(){
         if(valid()){
             if(result_){
                 freeReplyObject(result_);
             }
-            redisPool_->putConnection(connection_);
+            if(redisPool_){
+                redisPool_->putConnection(connection_);
+            }
         }
     }
     bool valid(){

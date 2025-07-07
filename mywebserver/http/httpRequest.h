@@ -109,38 +109,6 @@ public:
     }
     ~HttpRequest(){}
 
-    // string getHeaderValue(const string& item) const {
-    //     if(header_.find(item) == header_.end()){
-    //         return "";
-    //     }
-    //     return header_.at(item);
-    // }
-
-    // const Version& getVersion() const {
-    //     return version_;
-    // }
-    // const string& getBody() const {
-    //     return body_;
-    // }
-    
-    // void setHeaderValue(const string& item, const string& value){
-    //     if(header_.find(item) == header_.end()){
-    //         header_.insert({item, value});
-    //     }else{
-    //         header_.at(item) = value;
-    //     }
-    // }
-    // void setVersion(Version version){
-    //     version_ = version;
-    // }
-    // void setBody(string_view str){
-    //     body_ = str;
-    // }
-
-    // void appendBody(string_view str){
-    //     body_.append(str);
-    // }
-
     const Method& getMethod() const {return method_;}
     void setMethod(Method method){
         method_ = method;
@@ -222,23 +190,12 @@ public:
     }
 
 private:
-    //Version version_;
     Method method_;
     string path_;
     string message_;
     
     TimeStamp reqTime_;
-    
-    //map<string, string> header_;
-    
-    // string body_;
-
-    
-    //const void* request_;
 };
-
-
-
 
 } // namespace mywebserver
 

@@ -94,25 +94,6 @@ public:
         }
     }
 
-    // string getHeaderValue(const string& item) const {
-    //     if(header_.find(item) == header_.end()){
-    //         return "";
-    //     }
-    //     return header_.at(item);
-    // }
-    // const Version& getVersion(){
-    //     return version_;
-    // }
-    // void setHeaderValue(const string& item, const string& value){
-    //     if(header_.find(item) == header_.end()){
-    //         header_.insert({item, value});
-    //     }else{
-    //         header_.at(item) = value;
-    //     }
-    // }
-    // void setVersion(Version version){
-    //     version_ = version;
-    // }
     void setBody(string_view str) override {
         if(!body_.empty()){
             LOG_ERROR << "Failed in setBody. Body has been set data, please clear body content first.";
@@ -134,8 +115,6 @@ public:
         }else{
             LOG_ERROR << "Failed in setBodyWithFile. Body has been set data, please clear body content first.";
         }
-        // SmallFileReader fileContent(path, 64*64*1024);
-        //     appendBody(fileContent.toStringView());
     }
 
     BodyType getBodyType() const override {
@@ -207,7 +186,7 @@ private:
     }
 
     int statusCode_;
-    string body_;
+    string body_;//body_的两种设置方式会增加复杂性，对于读文件考虑直接用另外的path_表示。
     // string path_;
 
     enum ContentType{

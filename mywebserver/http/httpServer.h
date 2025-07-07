@@ -7,8 +7,6 @@
 
 namespace mywebserver{
 
-
-
 struct HttpContext:Noncopyable{
     HttpParser* paser;
     ContextMap context;

@@ -38,32 +38,30 @@ add_subdirectory(mywebserver)
 # target_link_libraries(testProgram ${MYSQL_LIB})
 # target_link_libraries(testProgram ${HIREDIS_LIBRARY})
 
-# 以下操作会将webserver安装到/usr/local/include目录下。
 
-# install(TARGETS webserver_base DESTINATION lib)
-# #install(TARGETS muduo_base_cpp11 DESTINATION lib)
 
-# file(GLOB HEADERS 
-#     "common/*.h"
-#     "logging/*.h"
-#     "process/*.h"
-#     "time/*.h"
-#     "event/*.h"
-#     "net/*.h"
-#     "poller/*.h"
-#     "http/*.h"
-#     "mysql/*.h"
-#     )
-# # install(FILES ${HEADERS} DESTINATION include/webserver/base)
-# # 为每个文件生成安装路径
-# foreach(file ${HEADERS})
-#     # 提取相对路径（保留目录结构）
-#     file(RELATIVE_PATH relative_file ${CMAKE_CURRENT_SOURCE_DIR} ${file})
-#     # 获取目标路径
-#     get_filename_component(target_path ${relative_file} DIRECTORY)
-#     message(STATUS "Variable MY_VAR is ${file}")
-#     # 安装文件并保留目录结构
-#     install(FILES ${file} DESTINATION include/webserver/base/${target_path})
-#     message(STATUS "installed path is include/webserver/base/${target_path}")
-# endforeach()
+# 以下操作会将webserver安装到/usr/local/include&lib目录下。
+
+install(TARGETS mynet DESTINATION lib)
+#install(TARGETS muduo_base_cpp11 DESTINATION lib)
+file(GLOB_RECURSE HEADERS 
+    "mybase/*.h"
+    "mynetlib/*.h"
+    "mywebserver/*.h"
+    )
+# install(FILES ${HEADERS} DESTINATION include/webserver/base)
+message(STATUS "HEADERS is ${HEADERS}")
+# 为每个文件生成安装路径
+foreach(file ${HEADERS})
+    # 提取相对路径（保留目录结构）
+    file(RELATIVE_PATH relative_file ${CMAKE_CURRENT_SOURCE_DIR} ${file})
+    # 获取目标路径
+    get_filename_component(target_path ${relative_file} DIRECTORY)
+    
+    # 安装文件并保留目录结构
+    install(FILES ${file} DESTINATION include/mynet/${target_path})
+    message(STATUS "installed path is include/mynet/${target_path}")
+endforeach()
+
+
 

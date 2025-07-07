@@ -25,9 +25,9 @@ RedisConnectionPool* redisPool;
 void initConnectionPool(){
     Global::setGlobalLogLevel(Logger::Warn);
     mysql::SqlServer sqlServer = {sqlUser.c_str(), password.c_str(), databaseName.c_str(), "127.0.0.1", sqlPort};
-    sqlPool = new SqlConnectionPool(threadNum, sqlServer, mysql::createMysqlConnection, mysql::destroyMysqlConnection);
+    sqlPool = new SqlConnectionPool(threadNum, sqlServer);
     redis::RedisServer redisServer = {"127.0.0.1", redisPort};
-    redisPool = new RedisConnectionPool(threadNum, redisServer, redis::createRedisConnection, redis::destroyRedisConnection);
+    redisPool = new RedisConnectionPool(threadNum, redisServer);
     {//初始化要用到的数据表。
         SqlConnectionGuard sqlConn(sqlPool);
         sqlConn.asssertQuery( \

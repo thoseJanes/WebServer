@@ -17,23 +17,27 @@ template<typename T, typename INFO>
 
 //有没有一种可能，连接池根本不需要增加连接数。因为只要给每个线程都创建一个连接，就不会有连接不够用的情况？
 //除非要同时开启多个连接异步查询？或者线程数太多了？
+//还是有意义的。
+
+//T为连接类型，INFO为服务器信息，需要实现T* createConnection()和void destroyConnection(T*)两个函数。
 class ConnectionPool:Noncopyable{
 public:
     typedef std::function<void()> InitCallback;
-    typedef std::function<T*(INFO&)> CreateConnectionCallback;
+    typedef std::function<T*()> CreateConnectionCallback;
     typedef std::function<void(T*)> CloseConnectionCallback;
     ConnectionPool(int connNum, INFO serverInfo, 
-                    CreateConnectionCallback createCallback, 
-                    CloseConnectionCallback closeCallback, 
                     InitCallback initCallback=NULL)
     :   mutex_(),
         hasConn_(mutex_),
         connNum_(0),
         autoCreateMaxNum_(0),
-        createCallback_(createCallback),
-        closeCallback_(closeCallback),
+        // createCallback_(serverInfo.createConnection),
+        // closeCallback_(serverInfo.destroyConnection),
         serverInfo_(serverInfo)
     {
+        createCallback_ = bind(&INFO::createConnection, serverInfo_);
+        closeCallback_ = bind(&INFO::destroyConnection, serverInfo_, placeholders::_1);
+        
         if(initCallback){
             initCallback();
         }
@@ -125,7 +129,7 @@ private:
         for(int i=0;i<connNum;i++){
             // T* conn = mysql::initMysqlConnection();
             // mysql::establishMysqlConnection(conn, host_.c_str(), user_.c_str(), pwd_.c_str(), db_.c_str(), port_);
-            T* conn = createCallback_(serverInfo_);
+            T* conn = createCallback_();
             newConnections.push_back(conn);
         }
 

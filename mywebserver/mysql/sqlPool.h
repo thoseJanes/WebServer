@@ -10,6 +10,26 @@ namespace mywebserver{
 
 namespace mysql{
 
+
+class SqlServer;
+MYSQL* initMysqlConnection();
+void establishMysqlConnection(MYSQL* conn, SqlServer& server);
+void testMysqlConnection(SqlServer& server);
+void closeMysqlConnection(MYSQL* conn);
+
+
+// inline MYSQL* createMysqlConnection(SqlServer& server){
+//     MYSQL* conn = mysql::initMysqlConnection();
+//     mysql::establishMysqlConnection(conn, server);
+//     return conn;
+// }
+
+// inline void destroyMysqlConnection(MYSQL* conn){
+//     mysql_close(conn);
+// }
+
+
+
 struct SqlServer{
     string name;
     string pwd;
@@ -17,23 +37,16 @@ struct SqlServer{
 
     string host;
     int port;
+
+    MYSQL* createConnection(){
+        MYSQL* conn = mysql::initMysqlConnection();
+        mysql::establishMysqlConnection(conn, *this);
+        return conn;
+    }
+    void destroyConnection(MYSQL* conn){
+        mysql_close(conn);
+    }
 };
-
-MYSQL* initMysqlConnection();
-void establishMysqlConnection(MYSQL* conn, SqlServer& server);
-void testMysqlConnection(SqlServer& server);
-void closeMysqlConnection(MYSQL* conn);
-
-
-inline MYSQL* createMysqlConnection(SqlServer& server){
-    MYSQL* conn = mysql::initMysqlConnection();
-    mysql::establishMysqlConnection(conn, server);
-    return conn;
-}
-
-inline void destroyMysqlConnection(MYSQL* conn){
-    mysql_close(conn);
-}
 
 }
 

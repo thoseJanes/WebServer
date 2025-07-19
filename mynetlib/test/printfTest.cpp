@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../../mybase/common/patterns.h"
+#include "../../mynetbase/common/patterns.h"
 using namespace mynetlib;
 class TestClass{
     friend Singleton<TestClass>;

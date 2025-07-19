@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <sys/uio.h>//readv、writev
 #include <string>
-#include "../../mybase/logging/logger.h"
+#include "../../mynetbase/logging/logger.h"
 #include "endian.h"
 namespace mynetlib{
     //注意：不论如何，prepend的数据都是在prependSize处结束的。

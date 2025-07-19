@@ -1,5 +1,5 @@
 #include "socket.h"
-#include "../../mybase/process/currentThread.h"
+#include "../../mynetbase/process/currentThread.h"
 
 namespace mynetlib{
 

@@ -1,5 +1,6 @@
 #include "sqlPool.h"
-#include "../../mybase/logging/logger.h"
+#include <string>
+#include "../../mynetbase/logging/logger.h"
 
 using namespace mywebserver;
 

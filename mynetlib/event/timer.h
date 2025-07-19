@@ -1,7 +1,7 @@
 #ifndef MYNETLIB_NET_TIMER_H
 #define MYNETLIB_NET_TIMER_H
-#include "../../mybase/time/timeStamp.h"
-#include "../../mybase/logging/logger.h"
+#include "../../mynetbase/time/timeStamp.h"
+#include "../../mynetbase/logging/logger.h"
 #include <functional>
 #include <assert.h>
 #include <atomic>

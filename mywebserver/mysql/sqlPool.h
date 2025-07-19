@@ -2,7 +2,7 @@
 #define MYWEBSERVER_MYSQL_SQLCONNECTIONPOOL_H
 
 #include <mysql/mysql.h>
-#include <mysql_connection.h>
+#include <string>
 
 using namespace std;
 namespace mywebserver{

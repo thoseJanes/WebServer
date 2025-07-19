@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string_view>
-#include "../../mybase/logging/logger.h"
+#include "../../mynetbase/logging/logger.h"
 
 //INADDR_LOOPBACK
 //IN6ADDR_LOOPBACK_INIT

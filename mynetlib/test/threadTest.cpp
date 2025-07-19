@@ -1,7 +1,7 @@
 #include <pthread.h>
-#include "../../mybase/common/mutexLock.h"
-#include "../../mybase/common/condition.h"
-#include "../../mybase/process/threadHandler.h"
+#include "../../mynetbase/common/mutexLock.h"
+#include "../../mynetbase/common/condition.h"
+#include "../../mynetbase/process/threadHandler.h"
 
 using namespace mynetlib;
 

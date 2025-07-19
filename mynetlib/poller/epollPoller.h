@@ -3,7 +3,7 @@
 #include "../event/poller.h"
 
 #include <sys/epoll.h>
-#include "../../mybase/common/patterns.h"
+#include "../../mynetbase/common/patterns.h"
 namespace mynetlib{
 
 class EpollPoller:Noncopyable, public Poller{

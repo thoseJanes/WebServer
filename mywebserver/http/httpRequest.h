@@ -4,7 +4,7 @@
 #include <string_view>
 #include <map>
 #include <assert.h>
-#include "../../mybase/time/timeStamp.h"
+#include "../../mynetbase/time/timeStamp.h"
 using namespace std;
 
 using namespace mynetlib;

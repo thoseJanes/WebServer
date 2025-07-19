@@ -1,8 +1,8 @@
 #ifndef MYNETLIB_NET_EVENTTHREAD_H
 #define MYNETLIB_NET_EVENTTHREAD_H
 #include "eventLoop.h"
-#include "../../mybase/process/threadHandler.h"
-#include "../../mybase/common/condition.h"
+#include "../../mynetbase/process/threadHandler.h"
+#include "../../mynetbase/common/condition.h"
 namespace mynetlib{
 
 //假设start和析构在同一个线程中。仍有可能在loop之前quit。这个问题要如何解决？

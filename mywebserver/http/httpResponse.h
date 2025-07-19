@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include "httpRequest.h"
-#include "../../mybase/logging/logger.h"
+#include "../../mynetbase/logging/logger.h"
 using namespace std;
 
 

@@ -1,6 +1,6 @@
 
-#include "../../mybase/logging/logger.h"
-#include "../../mybase/logging/logFile.h"
+#include "../../mynetbase/logging/logger.h"
+#include "../../mynetbase/logging/logFile.h"
 #include "stdio.h"
 #include <stdarg.h>//va_list 变参数
 #include <memory>

@@ -1,7 +1,7 @@
 #ifndef MYWEBSERVER_HTTP_HTTPPARSER_H
 #define MYWEBSERVER_HTTP_HTTPPARSER_H
 #include "../../mynetlib/net/connBuffer.h"
-#include "../../mybase/time/timeStamp.h"
+#include "../../mynetbase/time/timeStamp.h"
 #include "httpRequest.h"
 #include "httpResponse.h"
 

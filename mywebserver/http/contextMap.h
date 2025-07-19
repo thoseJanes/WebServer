@@ -3,7 +3,7 @@
 #include <string>
 #include <assert.h>
 #include <map>
-#include "../../mybase/common/patterns.h"
+#include "../../mynetbase/common/patterns.h"
 
 using namespace std;
 class ContextMap:mynetlib::Noncopyable{

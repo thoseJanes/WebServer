@@ -6,7 +6,7 @@
 #include "socket.h"
 #include "../event/channel.h"
 #include "../event/eventLoop.h"
-#include "../../mybase/process/currentThread.h"
+#include "../../mynetbase/process/currentThread.h"
 #include <functional>
 #include <memory>
 
@@ -17,6 +17,7 @@ typedef std::function<void(const shared_ptr<TcpConnection>&)> ConnectCallback;
 typedef std::function<void(const shared_ptr<TcpConnection>&)> WriteCompleteCallback;
 typedef std::function<void(const shared_ptr<TcpConnection>&, size_t)> HighWaterCallback;
 typedef std::function<void(const shared_ptr<TcpConnection>&)> CloseCallback;
+typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
 namespace detail{
     void defaultMessageCallback(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp timeStamp);
 

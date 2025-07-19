@@ -37,6 +37,8 @@ void webSocket::defaultWebSocketCallback(const shared_ptr<TcpConnection>& conn, 
 }
 
 
+
+
 void WebSocketServer::onHandshake(const shared_ptr<TcpConnection>& conn, ConnBuffer* buffer, TimeStamp time, ContextMap* context){
     if(!__builtin_expect(context->hasContext("httpParser"), true)){
         sendHttpResponse400AndShutdownWrite(conn);

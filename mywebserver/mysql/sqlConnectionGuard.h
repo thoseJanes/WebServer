@@ -3,9 +3,8 @@
 
 #include "sqlPool.h"
 #include <mysql/mysql.h>
-#include <mysql_connection.h>
-#include "../../mybase/common/strStream.h"
-#include "../../mybase/common/connectionPool.h"
+#include "../../mynetbase/common/strStream.h"
+#include "../../mynetbase/common/connectionPool.h"
 
 
 using namespace mynetlib;
@@ -24,8 +23,11 @@ public:
         connection_ = sqlPool_->getConnection(blockingGet, blockingMs);
     }
     //直接传入连接
-    SqlConnectionGuard(MYSQL* connection):sqlPool_(nullptr), result_(NULL){
+    SqlConnectionGuard(MYSQL* connection, MutexLock* mutex = nullptr):sqlPool_(nullptr), result_(NULL), mutex_(mutex){
         connection_ = connection;
+        if(mutex_){
+            mutex_->lock();
+        }
     }
     ~SqlConnectionGuard(){
         if(valid()){
@@ -34,6 +36,9 @@ public:
             }
             if(sqlPool_){
                 sqlPool_->putConnection(connection_);
+            }
+            if(mutex_){
+                mutex_->unlock();
             }
         }
     }
@@ -50,10 +55,10 @@ public:
         stream_ << '\0';
         if(stream_.isTruncated()){
             LOG_FATAL << "SqlConnectionGuard::query - Query failed with stream buffer truncated. Make sure length of query sentence is shorter than 500 bytes.";
-            return 0;
+            return -1;
             //这不是mysql本身的错误。应该怎么办呢？
         }else{
-            int ret = mysql_query(connection_, stream_.buffer().data());//执行新查询时，会隐式释放一个结果集。
+            int ret = mysql_query(connection_, getStreamBufferStart());//执行新查询时，会隐式释放一个结果集。
             if(ret){
                 LOG_ERROR << "Failed in mysql query. error: " << mysql_error(connection_);
             }
@@ -114,11 +119,25 @@ public:
         return mysql_fetch_row(result_);
     }
 
+    MYSQL* getConnection(){
+        return connection_;
+    }
+    const char* getStreamBufferStart(){
+        if(stream_.isTruncated()){
+            return NULL;
+        }
+        return stream_.buffer().data();
+    }
+    size_t getStreamBufferLen(){
+        return stream_.buffer().writtenBytes();
+    }
+
 private:
-    MYSQL* connection_;
-    MYSQL_RES* result_;
+    MYSQL* connection_ = nullptr;
+    MYSQL_RES* result_ = nullptr;
     QueryStream stream_;
-    SqlConnectionPool* sqlPool_;
+    SqlConnectionPool* sqlPool_ = nullptr;
+    MutexLock* mutex_ = nullptr;
 };
 
 }

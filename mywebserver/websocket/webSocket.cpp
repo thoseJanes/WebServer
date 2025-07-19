@@ -4,7 +4,7 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-#include "../../mybase/common/format.h"
+#include "../../mynetbase/common/format.h"
 #include "../http/httpRequest.h"
 #include "../http/httpResponse.h"
 

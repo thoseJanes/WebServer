@@ -13,43 +13,28 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-#add_subdirectory(test)
-# set(SOURCE_FILES
-#   file1.cc
-#   file2.cc
-#   )
+
 # 自动收集源文件
-add_subdirectory(mybase)
+add_subdirectory(mynetbase)
 add_subdirectory(mynetlib)
 add_subdirectory(mywebserver)
 
 
 
-# list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
-# find_package(MySQL REQUIRED)
-# target_include_directories(webserver_base PRIVATE ${MYSQL_INCLUDE_DIR})
-# target_link_libraries(webserver_base ${MYSQL_LIB})
-
-# set(HIREDIS_INCLUDE_DIR /usr/local/include/hiredis/include)
-# set(HIREDIS_LIBRARY /usr/local/lib/libhiredis.so)
-
-# add_executable(testProgram ./test/httpServerTest.cpp)
-# target_link_libraries(testProgram webserver_base)
-# target_link_libraries(testProgram ${MYSQL_LIB})
-# target_link_libraries(testProgram ${HIREDIS_LIBRARY})
-
-
 
 # 以下操作会将webserver安装到/usr/local/include&lib目录下。
 
-install(TARGETS mynet DESTINATION lib)
-#install(TARGETS muduo_base_cpp11 DESTINATION lib)
+install(TARGETS mynetbase DESTINATION lib)
+install(TARGETS mynetlib DESTINATION lib)
+install(TARGETS mywebserver DESTINATION lib)
+
+
 file(GLOB_RECURSE HEADERS 
-    "mybase/*.h"
+    "mynetbase/*.h"
     "mynetlib/*.h"
     "mywebserver/*.h"
     )
-# install(FILES ${HEADERS} DESTINATION include/webserver/base)
+
 message(STATUS "HEADERS is ${HEADERS}")
 # 为每个文件生成安装路径
 foreach(file ${HEADERS})

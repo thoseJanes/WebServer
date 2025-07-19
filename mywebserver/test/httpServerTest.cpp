@@ -2,8 +2,8 @@
 #include <hiredis/read.h>
 
 #include "../http/httpServer.h"
-#include "../../mybase/logging/logger.h"
-#include "../../mybase/common/fileUtil.h"
+#include "../../mynetbase/logging/logger.h"
+#include "../../mynetbase/common/fileUtil.h"
 #include "../mysql/sqlConnectionGuard.h"
 #include "../redis/redisConnectionGuard.h"
 

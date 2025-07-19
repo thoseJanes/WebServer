@@ -6,8 +6,8 @@
 #include <any>
 #include <functional>
 #include <memory>
-#include "../../mybase/logging/logger.h"
-#include "../../mybase/common/patterns.h"
+#include "../../mynetbase/logging/logger.h"
+#include "../../mynetbase/common/patterns.h"
 
 namespace mynetlib{
 

@@ -8,8 +8,8 @@
 #include <string.h>//strerror_r
 #include <pwd.h>//getpwuid_r
 #include <string>
-#include "../../mybase/common/fileUtil.h"
-#include "../../mybase/process/currentProcess.h"
+#include "../../mynetbase/common/fileUtil.h"
+#include "../../mynetbase/process/currentProcess.h"
 #include <sys/prctl.h>
 using namespace std;
 using namespace mynetlib;

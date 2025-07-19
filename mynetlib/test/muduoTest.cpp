@@ -1,6 +1,6 @@
 #include "../http/httpServer.h"
-#include "../../mybase/logging/logger.h"
-#include "../../mybase/time/timeStamp.h"
+#include "../../mynetbase/logging/logger.h"
+#include "../../mynetbase/time/timeStamp.h"
 
 #include <iostream>
 #include <map>
